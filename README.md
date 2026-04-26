@@ -1,2 +1,3 @@
-# privacy-policy
-Politica de Privacidade - Quiosque Litoral
+# Política de Privacidade — Quiosque Litoral
+
+Ver [política de privacidade](./privacy-policy.html).
