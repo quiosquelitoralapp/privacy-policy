@@ -88,16 +88,18 @@ class GameOverlayView(context: Context) : View(context) {
             if (r.points.isNotEmpty()) drawMarkerWind(canvas, r.landingX, groundY)
         }
 
-        // Label de status
-        if (noWind.isNotEmpty() && withWind.isNotEmpty()) {
-            val drift = withWind[0].landingX - noWind[0].landingX
-            val driftStr = if (drift > 0) "+${drift.toInt()}px" else "${drift.toInt()}px"
-            val label = "◎ ${angle.toInt()}° P${power.toInt()}  deriva:$driftStr"
-            val lx = charX
-            val ly = (charY - 100f).coerceAtLeast(50f)
-            canvas.drawRect(lx - 220f, ly - 40f, lx + 220f, ly + 8f, labelBgPaint)
-            canvas.drawText(label, lx, ly, labelPaint)
-        }
+        // HUD: ângulo, vento, deriva
+        val wHSym = when { windH > 0f -> "→"; windH < 0f -> "←"; else -> "•" }
+        val wVSym = when { windV > 0f -> "↓"; windV < 0f -> "↑"; else -> "" }
+        val drift = if (withWind.isNotEmpty() && noWind.isNotEmpty())
+            withWind[0].landingX - noWind[0].landingX else 0f
+        val driftStr = if (drift > 0) "+${drift.toInt()}" else "${drift.toInt()}"
+        val wStr = "${wHSym}${kotlin.math.abs(windH).toInt()} ${wVSym}${kotlin.math.abs(windV).toInt()}"
+        val label = "${angle.toInt()}° | V:$wStr | Δ$driftStr"
+        val lx = width / 2f
+        val ly = 52f
+        canvas.drawRect(lx - 260f, ly - 38f, lx + 260f, ly + 10f, labelBgPaint)
+        canvas.drawText(label, lx, ly, labelPaint)
     }
 
     private fun drawTraj(canvas: Canvas, pts: List<TrajectoryPoint>, paint: Paint) {

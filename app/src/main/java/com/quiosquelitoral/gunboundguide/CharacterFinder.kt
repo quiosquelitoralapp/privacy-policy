@@ -23,8 +23,8 @@ object CharacterFinder {
         val pixels = IntArray(w * h)
         bmp.getPixels(pixels, 0, w, 0, 0, w, h)
 
-        val y1 = (h * 0.30).toInt()
-        val y2 = (h * 0.82).toInt()
+        val y1 = (h * 0.05).toInt()   // personagens podem estar no topo
+        val y2 = (h * 0.90).toInt()
 
         var bestScore = 0
         var bestX = w / 2

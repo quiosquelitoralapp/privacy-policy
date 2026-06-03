@@ -174,7 +174,19 @@ class FloatingWindowService : Service() {
             wm.defaultDisplay.getRealMetrics(m)
             screenW = m.widthPixels; screenH = m.heightPixels; screenDpi = m.densityDpi
 
-            gameOverlayView?.screenW = screenW.toFloat()
+            // Ativa overlay imediatamente com posição padrão antes de detectar
+            gameOverlayView?.let { gov ->
+                gov.screenW  = screenW.toFloat()
+                gov.charX    = screenW * 0.25f
+                gov.charY    = screenH * 0.55f
+                gov.groundY  = screenH * 0.58f
+                gov.angle    = 45f
+                gov.power    = power
+                gov.facingRight = facingRight
+                gov.mobile   = MobileData.mobiles[mobileIndex]
+                gov.active   = true
+                gov.invalidate()
+            }
 
             val ir = ImageReader.newInstance(screenW, screenH, PixelFormat.RGBA_8888, 2)
             imageReader = ir
@@ -223,51 +235,58 @@ class FloatingWindowService : Service() {
     }
 
     private fun processScan(bmp: Bitmap) {
-        // 1. Vento — faixa superior central
-        val windCrop = try {
-            Bitmap.createBitmap(bmp, screenW / 4, 0, screenW / 2, screenH / 8)
-        } catch (e: Throwable) { null }
-        val windResult = windCrop?.let { WindDetector.detect(it) }
+        // 1. Vento — tenta faixa superior central, depois faixa mais ampla
+        var windResult: WindDetector.WindResult? = null
+        try {
+            val cx = screenW / 4; val cw = screenW / 2; val ch = (screenH * 0.15).toInt()
+            windResult = WindDetector.detect(Bitmap.createBitmap(bmp, cx, 0, cw, ch))
+        } catch (e: Throwable) {}
+        if (windResult == null || windResult.confidence < 0.45f) {
+            try {
+                // Tenta faixa top completa
+                val ch = (screenH * 0.20).toInt()
+                windResult = WindDetector.detect(Bitmap.createBitmap(bmp, 0, 0, screenW, ch))
+            } catch (e: Throwable) {}
+        }
 
-        // 2. Personagem
+        // 2. Personagem — scan em tela inteira (5%-90%)
         val charPos = CharacterFinder.find(bmp)
 
-        // 3. Ângulo de mira a partir do personagem
-        val detectedAngle = if (charPos != null)
-            AimDetector.detect(bmp, charPos.x, charPos.groundY, facingRight)
+        // 3. Ângulo de mira a partir do personagem detectado
+        val charForAim = charPos
+        val detectedAngle = if (charForAim != null)
+            AimDetector.detect(bmp, charForAim.x, charForAim.groundY, facingRight)
         else null
 
         mainHandler.post {
             val gov = gameOverlayView ?: return@post
-            var changed = false
 
+            // Vento
             if (windResult != null && windResult.confidence >= 0.45f) {
                 windH = windResult.windH
                 windV = windResult.windV
-                changed = true
             }
 
+            // Posição do personagem (atualiza se encontrou, senão mantém padrão)
             if (charPos != null) {
                 gov.charX   = charPos.x.toFloat()
                 gov.charY   = charPos.groundY.toFloat()
                 gov.groundY = charPos.groundY.toFloat()
-                gov.active  = true
-                changed = true
             }
 
+            // Ângulo (atualiza se detectado)
             if (detectedAngle != null) {
                 gov.angle = detectedAngle
-                changed = true
             }
 
-            if (changed) {
-                gov.windH       = windH
-                gov.windV       = windV
-                gov.power       = power
-                gov.facingRight = facingRight
-                gov.mobile      = MobileData.mobiles[mobileIndex]
-                gov.invalidate()
-            }
+            // Sempre redesenha com dados atualizados
+            gov.windH       = windH
+            gov.windV       = windV
+            gov.power       = power
+            gov.facingRight = facingRight
+            gov.mobile      = MobileData.mobiles[mobileIndex]
+            gov.active      = true
+            gov.invalidate()
         }
     }
 
