@@ -31,11 +31,27 @@ class FloatingWindowService : Service() {
 
     private var mediaProjection: MediaProjection? = null
 
+    // Views kept at class level so the scan loop can update them
+    private var trajectoryView: TrajectoryView? = null
+    private var windHText: TextView? = null
+    private var windVText: TextView? = null
+    private var windPreviewImg: ImageView? = null
+
+    // Wind state (horizontal)
+    private var windH = 0
+    private var windHDir = 1   // 1=direita, -1=esquerda
+
+    // Wind state (vertical)
+    private var windV = 0
+    private var windVDir = 1   // 1=baixo, -1=cima
+
+    private val scanHandler = Handler(Looper.getMainLooper())
+    private var scanRunnable: Runnable? = null
+
     companion object {
         const val ACTION_STOP = "STOP_OVERLAY"
         const val NOTIF_ID = 1
         const val CHANNEL_ID = "gb_overlay"
-        // TYPE_APPLICATION_OVERLAY (API 26) = 2038; TYPE_PHONE (legado) = 2002
         const val TYPE_OVERLAY_VALUE = 2038
         var isRunning = false
     }
@@ -49,9 +65,7 @@ class FloatingWindowService : Service() {
         try {
             createNotificationChannel()
             startForeground(NOTIF_ID, buildNotification())
-        } catch (e: Throwable) {
-            // Android 14 may reject startForeground without type — continues without notification
-        }
+        } catch (e: Throwable) {}
         createFloatingWindow()
     }
 
@@ -121,22 +135,26 @@ class FloatingWindowService : Service() {
             collapseBtn.text   = if (collapsed) "▼" else "▲"
         }
 
-        val previewImg = view.findViewById(R.id.overlayWindPreview) as ImageView
+        windPreviewImg = view.findViewById(R.id.overlayWindPreview) as ImageView
         view.findViewById(R.id.btnScanWind).setOnClickListener {
-            captureWindRegion(previewImg)
+            windPreviewImg?.let { captureWindRegion(it, applyResult = true) }
         }
     }
 
     private fun setupControls(v: View) {
-        val tv = v.findViewById(R.id.overlayTrajectoryView)  as TrajectoryView
-        val at = v.findViewById(R.id.overlayAngleValue)      as TextView
-        val pt = v.findViewById(R.id.overlayPowerValue)      as TextView
-        val wt = v.findViewById(R.id.overlayWindValue)       as TextView
-        val wvt= v.findViewById(R.id.overlayWindVertValue)   as TextView
-        val db = v.findViewById(R.id.overlayBtnDirection)    as Button
-        val mc = v.findViewById(R.id.overlayMobileContainer) as LinearLayout
+        val tv  = v.findViewById(R.id.overlayTrajectoryView)  as TrajectoryView
+        val at  = v.findViewById(R.id.overlayAngleValue)      as TextView
+        val pt  = v.findViewById(R.id.overlayPowerValue)      as TextView
+        val wt  = v.findViewById(R.id.overlayWindValue)       as TextView
+        val wvt = v.findViewById(R.id.overlayWindVertValue)   as TextView
+        val db  = v.findViewById(R.id.overlayBtnDirection)    as Button
+        val mc  = v.findViewById(R.id.overlayMobileContainer) as LinearLayout
 
-        // Seleção de mobile
+        trajectoryView = tv
+        windHText = wt
+        windVText = wvt
+
+        // Mobile selection
         val btns = mutableListOf<Button>()
         MobileData.mobiles.forEachIndexed { i, mobile ->
             val btn = Button(this)
@@ -165,56 +183,137 @@ class FloatingWindowService : Service() {
         btns[0].setBackgroundColor(Color.parseColor("#00FF88"))
         btns[0].setTextColor(Color.BLACK)
 
-        // Estado
-        var angle = 45; var power = 50; var windH = 0; var windV = 0
-        var windHDir = 1  // 1=direita, -1=esquerda
-        var windVDir = 1  // 1=baixo, -1=cima
+        var angle = 45; var power = 50
 
         fun updateAngle() { tv.angle = angle.toFloat(); at.text = "$angle°" }
         fun updatePower() { tv.power = power.toFloat(); pt.text = "$power" }
-        fun updateWindH() {
-            tv.windSpeed = (windH * windHDir).toFloat()
-            val sym = if (windHDir > 0) "→" else "←"
-            wt.text = "$sym$windH"
-        }
-        fun updateWindV() {
-            tv.windSpeedY = (windV * windVDir).toFloat()
-            val sym = if (windVDir > 0) "↓" else "↑"
-            wvt.text = "$sym$windV"
-        }
 
-        updateAngle(); updatePower(); updateWindH(); updateWindV()
+        updateAngle(); updatePower()
+        applyWindToView()
 
-        // Botões de ângulo
+        // Angle buttons
         v.findViewById(R.id.btnAngleMinus5).setOnClickListener { angle = (angle - 5).coerceAtLeast(0); updateAngle() }
         v.findViewById(R.id.btnAngleMinus1).setOnClickListener { angle = (angle - 1).coerceAtLeast(0); updateAngle() }
         v.findViewById(R.id.btnAnglePlus1) .setOnClickListener { angle = (angle + 1).coerceAtMost(90); updateAngle() }
         v.findViewById(R.id.btnAnglePlus5) .setOnClickListener { angle = (angle + 5).coerceAtMost(90); updateAngle() }
 
-        // Botões de força
+        // Power buttons
         v.findViewById(R.id.btnPowerMinus5).setOnClickListener { power = (power - 5).coerceAtLeast(0);   updatePower() }
         v.findViewById(R.id.btnPowerMinus1).setOnClickListener { power = (power - 1).coerceAtLeast(0);   updatePower() }
         v.findViewById(R.id.btnPowerPlus1) .setOnClickListener { power = (power + 1).coerceAtMost(100);  updatePower() }
         v.findViewById(R.id.btnPowerPlus5) .setOnClickListener { power = (power + 5).coerceAtMost(100);  updatePower() }
 
-        // Botões de vento horizontal
-        v.findViewById(R.id.btnWindLeft) .setOnClickListener { windHDir = -1; updateWindH() }
-        v.findViewById(R.id.btnWindRight).setOnClickListener { windHDir =  1; updateWindH() }
-        v.findViewById(R.id.btnWindMinus).setOnClickListener { windH = (windH - 1).coerceAtLeast(0); updateWindH() }
-        v.findViewById(R.id.btnWindPlus) .setOnClickListener { windH = (windH + 1).coerceAtMost(10); updateWindH() }
+        // Horizontal wind buttons
+        v.findViewById(R.id.btnWindLeft) .setOnClickListener { windHDir = -1; applyWindToView() }
+        v.findViewById(R.id.btnWindRight).setOnClickListener { windHDir =  1; applyWindToView() }
+        v.findViewById(R.id.btnWindMinus).setOnClickListener { windH = (windH - 1).coerceAtLeast(0); applyWindToView() }
+        v.findViewById(R.id.btnWindPlus) .setOnClickListener { windH = (windH + 1).coerceAtMost(10); applyWindToView() }
 
-        // Botões de vento vertical
-        v.findViewById(R.id.btnWindUp)       .setOnClickListener { windVDir = -1; updateWindV() }
-        v.findViewById(R.id.btnWindDown)     .setOnClickListener { windVDir =  1; updateWindV() }
-        v.findViewById(R.id.btnWindVertMinus).setOnClickListener { windV = (windV - 1).coerceAtLeast(0); updateWindV() }
-        v.findViewById(R.id.btnWindVertPlus) .setOnClickListener { windV = (windV + 1).coerceAtMost(10); updateWindV() }
+        // Vertical wind buttons
+        v.findViewById(R.id.btnWindUp)       .setOnClickListener { windVDir = -1; applyWindToView() }
+        v.findViewById(R.id.btnWindDown)     .setOnClickListener { windVDir =  1; applyWindToView() }
+        v.findViewById(R.id.btnWindVertMinus).setOnClickListener { windV = (windV - 1).coerceAtLeast(0); applyWindToView() }
+        v.findViewById(R.id.btnWindVertPlus) .setOnClickListener { windV = (windV + 1).coerceAtMost(10); applyWindToView() }
 
-        // Direção do personagem
+        // Character direction
         var right = true
         db.text = "-> DIREITA"
         db.setOnClickListener {
             right = !right; tv.facingRight = right
             db.text = if (right) "-> DIREITA" else "<- ESQUERDA"
+        }
+    }
+
+    private fun applyWindToView() {
+        val tv = trajectoryView ?: return
+        tv.windSpeed  = (windH * windHDir).toFloat()
+        tv.windSpeedY = (windV * windVDir).toFloat()
+        windHText?.text = "${if (windHDir > 0) "→" else "←"}$windH"
+        windVText?.text = "${if (windVDir > 0) "↓" else "↑"}$windV"
+    }
+
+    // ---------------------------------------------------------------
+    // Continuous auto-scan loop (runs every 1.2 s when projection OK)
+    // ---------------------------------------------------------------
+    private fun startWindScanLoop() {
+        val run = object : Runnable {
+            override fun run() {
+                val img = windPreviewImg
+                if (img != null && mediaProjection != null) {
+                    captureWindRegion(img, applyResult = true)
+                }
+                scanHandler.postDelayed(this, 1200)
+            }
+        }
+        scanRunnable = run
+        scanHandler.postDelayed(run, 1200)
+    }
+
+    private fun stopWindScanLoop() {
+        scanRunnable?.let { scanHandler.removeCallbacks(it) }
+        scanRunnable = null
+    }
+
+    fun captureWindRegion(previewImage: ImageView, applyResult: Boolean = false) {
+        val proj = mediaProjection ?: return
+        try {
+            val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val metrics = DisplayMetrics()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealMetrics(metrics)
+            val sw = metrics.widthPixels
+            val sh = metrics.heightPixels
+            val density = metrics.densityDpi
+
+            val reader = ImageReader.newInstance(sw, sh, PixelFormat.RGBA_8888, 2)
+            val vd: VirtualDisplay = proj.createVirtualDisplay(
+                "GBWindScan", sw, sh, density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                reader.surface, null, null
+            )
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    val image = reader.acquireLatestImage()
+                    if (image != null) {
+                        val plane = image.planes[0]
+                        val buf = plane.buffer
+                        val ps = plane.pixelStride
+                        val rs = plane.rowStride
+                        val bmp = Bitmap.createBitmap(rs / ps, sh, Bitmap.Config.ARGB_8888)
+                        bmp.copyPixelsFromBuffer(buf)
+                        image.close()
+
+                        val cx = sw / 4
+                        val cw = sw / 2
+                        val ch = sh / 8
+                        val crop = Bitmap.createBitmap(bmp, cx, 0, cw, ch)
+
+                        Handler(Looper.getMainLooper()).post {
+                            previewImage.setImageBitmap(crop)
+                            previewImage.visibility = View.VISIBLE
+
+                            if (applyResult) {
+                                val result = WindDetector.detect(crop)
+                                if (result != null && result.confidence >= 0.5f) {
+                                    windH    = result.magnitude
+                                    windHDir = if (result.windH >= 0f) 1 else -1
+                                    windV    = kotlin.math.abs(result.windV).toInt()
+                                    windVDir = if (result.windV >= 0f) 1 else -1
+                                    applyWindToView()
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Throwable) {
+                    // silently skip failed captures in the auto-loop
+                } finally {
+                    try { vd.release() } catch (e: Throwable) {}
+                    try { reader.close() } catch (e: Throwable) {}
+                }
+            }, 300)
+        } catch (e: Throwable) {
+            // projection may have been revoked; loop will retry next cycle
         }
     }
 
@@ -258,7 +357,6 @@ class FloatingWindowService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
-        // Inicializa MediaProjection se disponível
         try {
             val resultCode = intent?.getIntExtra("proj_result", 0) ?: 0
             @Suppress("DEPRECATION")
@@ -266,71 +364,18 @@ class FloatingWindowService : Service() {
             if (resultCode == Activity.RESULT_OK && data != null) {
                 val pm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
                 mediaProjection = pm?.getMediaProjection(resultCode, data)
+                if (mediaProjection != null) {
+                    startWindScanLoop()
+                }
             }
         } catch (e: Throwable) {}
         return START_NOT_STICKY
     }
 
-    fun captureWindRegion(previewImage: ImageView) {
-        val proj = mediaProjection
-        if (proj == null) {
-            toast("Permissão de captura não concedida")
-            return
-        }
-        try {
-            val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val metrics = DisplayMetrics()
-            @Suppress("DEPRECATION")
-            wm.defaultDisplay.getRealMetrics(metrics)
-            val sw = metrics.widthPixels
-            val sh = metrics.heightPixels
-            val density = metrics.densityDpi
-
-            val reader = ImageReader.newInstance(sw, sh, PixelFormat.RGBA_8888, 2)
-            val vd: VirtualDisplay = proj.createVirtualDisplay(
-                "GBWindScan", sw, sh, density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                reader.surface, null, null
-            )
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                try {
-                    val image = reader.acquireLatestImage()
-                    if (image != null) {
-                        val plane = image.planes[0]
-                        val buf = plane.buffer
-                        val ps = plane.pixelStride
-                        val rs = plane.rowStride
-                        val bmp = Bitmap.createBitmap(rs / ps, sh, Bitmap.Config.ARGB_8888)
-                        bmp.copyPixelsFromBuffer(buf)
-                        image.close()
-
-                        // Recorta a faixa superior central (onde fica o indicador de vento)
-                        val cx = sw / 4
-                        val cw = sw / 2
-                        val ch = sh / 8
-                        val crop = Bitmap.createBitmap(bmp, cx, 0, cw, ch)
-
-                        Handler(Looper.getMainLooper()).post {
-                            previewImage.setImageBitmap(crop)
-                            previewImage.visibility = View.VISIBLE
-                        }
-                    }
-                } catch (e: Throwable) {
-                    toast("Erro captura: ${e.javaClass.simpleName}")
-                } finally {
-                    try { vd.release() } catch (e: Throwable) {}
-                    try { reader.close() } catch (e: Throwable) {}
-                }
-            }, 300)
-        } catch (e: Throwable) {
-            toast("Erro ao capturar: ${e.javaClass.simpleName}")
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        stopWindScanLoop()
         try { mediaProjection?.stop() } catch (e: Throwable) {}
         val v = floatingView
         val wm = windowManager
