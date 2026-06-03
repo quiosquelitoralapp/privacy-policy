@@ -11,7 +11,7 @@ APKSIGNER_JAR=/usr/lib/android-sdk/build-tools/29.0.3/apksigner.jar
 SRC=$PROJECT/app/src/main/java/com/quiosquelitoral/gunboundguide
 RES=$PROJECT/app/src/main/res
 MANIFEST=$PROJECT/app/src/main/AndroidManifest.xml
-KEYSTORE=$BUILD/debug.keystore
+KEYSTORE=$PROJECT/debug.keystore
 PKG=com/quiosquelitoral/gunboundguide
 
 echo "=== Limpando build anterior ==="

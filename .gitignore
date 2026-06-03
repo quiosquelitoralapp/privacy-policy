@@ -10,3 +10,4 @@ build_out/
 
 # Local SDK config
 local.properties
+debug.keystore
