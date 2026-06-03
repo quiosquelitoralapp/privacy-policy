@@ -41,9 +41,9 @@ class FloatingWindowService : Service() {
     // Estado detectado automaticamente
     private var windH = 0f
     private var windV = 0f
+    private var windDetected = false
     private var power = 70f        // valor padrão razoável
     private var facingRight = true
-    private var mobileIndex = 0
 
     // Loop de scan
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -51,8 +51,6 @@ class FloatingWindowService : Service() {
     private var scanRunnable: Runnable? = null
     private var scanActive = false
 
-    // Referência ao botão de mobile para atualizar o texto
-    private var btnMobile: Button? = null
 
     companion object {
         const val ACTION_STOP = "STOP_OVERLAY"
@@ -108,7 +106,8 @@ class FloatingWindowService : Service() {
             gov.angle    = 45f
             gov.power    = power
             gov.facingRight = facingRight
-            gov.mobile   = MobileData.mobiles[mobileIndex]
+            gov.mobile   = MobileData.mobiles[0]
+            gov.windDetected = false
             gov.active   = true
 
             // 2) Barra mínima de controle
@@ -135,7 +134,6 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupBar(bar: View, wm: WindowManager, bp: WindowManager.LayoutParams) {
-        // Drag pela barra inteira (exceto botões)
         bar.findViewById(R.id.floatingHeader).setOnTouchListener { _, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -150,19 +148,7 @@ class FloatingWindowService : Service() {
             }
         }
 
-        // Cicla mobiles
-        val mob = bar.findViewById(R.id.btnMobileCycle) as Button
-        btnMobile = mob
-        mob.text = MobileData.mobiles[mobileIndex].displayName
-        mob.setOnClickListener {
-            mobileIndex = (mobileIndex + 1) % MobileData.mobiles.size
-            val m = MobileData.mobiles[mobileIndex]
-            mob.text = m.displayName
-            gameOverlayView?.mobile = m
-            gameOverlayView?.invalidate()
-        }
-
-        // Direção
+        // Direção do personagem (para cálculo de trajetória)
         val faceBtn = bar.findViewById(R.id.btnFacing) as Button
         faceBtn.text = "→"
         faceBtn.setOnClickListener {
@@ -172,7 +158,6 @@ class FloatingWindowService : Service() {
             gameOverlayView?.invalidate()
         }
 
-        // Fechar
         bar.findViewById(R.id.btnCloseOverlay).setOnClickListener { stopSelf() }
     }
 
@@ -196,7 +181,8 @@ class FloatingWindowService : Service() {
                 gov.angle    = 45f
                 gov.power    = power
                 gov.facingRight = facingRight
-                gov.mobile   = MobileData.mobiles[mobileIndex]
+                gov.mobile   = MobileData.mobiles[0]
+                gov.windDetected = false
                 gov.active   = true
                 gov.invalidate()
             }
@@ -248,17 +234,23 @@ class FloatingWindowService : Service() {
     }
 
     private fun processScan(bmp: Bitmap) {
-        // 1. Vento — tenta faixa superior central, depois faixa mais ampla
+        // 1. Vento — tenta várias regiões do topo da tela
         var windResult: WindDetector.WindResult? = null
-        try {
-            val cx = screenW / 4; val cw = screenW / 2; val ch = (screenH * 0.15).toInt()
-            windResult = WindDetector.detect(Bitmap.createBitmap(bmp, cx, 0, cw, ch))
-        } catch (e: Throwable) {}
-        if (windResult == null || windResult.confidence < 0.45f) {
+        val tries = listOf(
+            // faixa central top 12%
+            { val cx = screenW / 4; val cw = screenW / 2; val ch = (screenH * 0.12).toInt()
+              if (ch > 5) WindDetector.detect(Bitmap.createBitmap(bmp, cx, 0, cw, ch)) else null },
+            // faixa top completa 18%
+            { val ch = (screenH * 0.18).toInt()
+              if (ch > 5) WindDetector.detect(Bitmap.createBitmap(bmp, 0, 0, screenW, ch)) else null },
+            // faixa central top 25%
+            { val cx = screenW / 4; val cw = screenW / 2; val ch = (screenH * 0.25).toInt()
+              if (ch > 5) WindDetector.detect(Bitmap.createBitmap(bmp, cx, 0, cw, ch)) else null }
+        )
+        for (t in tries) {
             try {
-                // Tenta faixa top completa
-                val ch = (screenH * 0.20).toInt()
-                windResult = WindDetector.detect(Bitmap.createBitmap(bmp, 0, 0, screenW, ch))
+                val r = t()
+                if (r != null && r.confidence >= 0.25f) { windResult = r; break }
             } catch (e: Throwable) {}
         }
 
@@ -274,16 +266,17 @@ class FloatingWindowService : Service() {
             val gov = gameOverlayView ?: return@post
 
             // Vento
-            if (windResult != null && windResult.confidence >= 0.45f) {
+            if (windResult != null && windResult.confidence >= 0.25f) {
                 windH = windResult.windH
                 windV = windResult.windV
+                windDetected = true
             }
 
             // Posição do personagem
             if (charPos != null) {
                 gov.charX   = charPos.cannonX.toFloat()
                 gov.charY   = charPos.cannonY.toFloat()
-                gov.groundY = (screenH * 0.80f)   // fundo conservador
+                gov.groundY = (screenH * 0.80f)
             }
 
             // Ângulo (atualiza se detectado)
@@ -292,12 +285,13 @@ class FloatingWindowService : Service() {
             }
 
             // Sempre redesenha com dados atualizados
-            gov.windH       = windH
-            gov.windV       = windV
-            gov.power       = power
-            gov.facingRight = facingRight
-            gov.mobile      = MobileData.mobiles[mobileIndex]
-            gov.active      = true
+            gov.windH        = windH
+            gov.windV        = windV
+            gov.windDetected = windDetected
+            gov.power        = power
+            gov.facingRight  = facingRight
+            gov.mobile       = MobileData.mobiles[0]
+            gov.active       = true
             gov.invalidate()
         }
     }

@@ -14,8 +14,8 @@ object WindDetector {
         val confidence: Float  // 0..1
     )
 
-    private const val BRIGHT = 160  // limiar de pixel "aceso"
-    private const val MIN_PIXELS = 20
+    private const val BRIGHT = 130  // limiar de pixel "aceso" (reduzido para capturar mais)
+    private const val MIN_PIXELS = 8
 
     /**
      * Recebe o crop do indicador de vento (faixa superior central da tela)
@@ -57,7 +57,7 @@ object WindDetector {
         // --- 4. Detecta magnitude pelo dígito ---
         val mag = detectDigit(gray, digitX1, by0, digitX2, by1, w, h)
 
-        val conf = if (mag > 0) 0.75f else 0.4f
+        val conf = if (mag > 0) 0.70f else 0.28f
         val strength = mag.toFloat()
 
         return when (dir) {

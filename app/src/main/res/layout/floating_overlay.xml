@@ -23,17 +23,6 @@
         android:paddingLeft="4dp"
         android:paddingRight="6dp"/>
 
-    <!-- Cicla os mobiles ao tocar -->
-    <Button
-        android:id="@+id/btnMobileCycle"
-        android:layout_width="72dp"
-        android:layout_height="30dp"
-        android:text="Aduka"
-        android:textSize="9sp"
-        android:textColor="#FFFFFF"
-        android:background="#1E3A5A"
-        android:padding="0dp"/>
-
     <!-- Direção do personagem -->
     <Button
         android:id="@+id/btnFacing"

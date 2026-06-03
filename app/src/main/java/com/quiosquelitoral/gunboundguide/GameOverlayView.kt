@@ -13,6 +13,7 @@ class GameOverlayView(context: Context) : View(context) {
     var power   = 50f
     var windH   = 0f
     var windV   = 0f
+    var windDetected = false
     var facingRight = true
     var mobile  = MobileData.mobiles[0]
     var screenW = 1f
@@ -98,16 +99,20 @@ class GameOverlayView(context: Context) : View(context) {
         }
 
         // HUD no topo: ângulo, vento, deriva
-        val wH = kotlin.math.abs(windH).toInt()
-        val wV = kotlin.math.abs(windV).toInt()
-        val wHSym = if (windH > 0f) "→" else if (windH < 0f) "←" else "-"
-        val wVSym = if (windV > 0f) "↓" else if (windV < 0f) "↑" else ""
-        val drift = if (withWind.isNotEmpty() && noWind.isNotEmpty())
-            (withWind[0].landingX - noWind[0].landingX).toInt() else 0
-        val driftStr = if (drift >= 0) "+$drift" else "$drift"
-        val label = "${angle.toInt()}° | $wHSym$wH $wVSym$wV | Δ$driftStr px"
         val cx = dw / 2f
-        canvas.drawRect(cx - 280f, 8f, cx + 280f, 60f, hudBg)
+        val label = if (!windDetected) {
+            "${angle.toInt()}° | VENTO: detectando..."
+        } else {
+            val wH = kotlin.math.abs(windH).toInt()
+            val wV = kotlin.math.abs(windV).toInt()
+            val wHSym = if (windH > 0f) "→" else if (windH < 0f) "←" else "·"
+            val wVSym = if (windV > 0f) "↓" else if (windV < 0f) "↑" else ""
+            val drift = if (withWind.isNotEmpty() && noWind.isNotEmpty())
+                (withWind[0].landingX - noWind[0].landingX).toInt() else 0
+            val driftStr = if (drift >= 0) "+$drift" else "$drift"
+            "${angle.toInt()}° | $wHSym$wH $wVSym$wV | Δ$driftStr px"
+        }
+        canvas.drawRect(cx - 310f, 8f, cx + 310f, 60f, hudBg)
         canvas.drawText(label, cx, 50f, hudText)
     }
 
