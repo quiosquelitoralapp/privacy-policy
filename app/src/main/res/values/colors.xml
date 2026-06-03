@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#0D1B2A</color>
+    <color name="bg_header">#0A1520</color>
+    <color name="bg_panel">#111E2D</color>
+    <color name="accent_green">#00FF88</color>
+    <color name="accent_gold">#FFD700</color>
+    <color name="accent_orange">#FF6B35</color>
+    <color name="accent_blue">#87CEEB</color>
+    <color name="label_color">#AAAAAA</color>
+    <color name="btn_bg">#1E3A5A</color>
+</resources>

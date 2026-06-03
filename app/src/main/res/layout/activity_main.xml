@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_dark">
+
+    <!-- Título -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="GUNBOUND — GUIA DE MIRA"
+        android:textColor="@color/accent_gold"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:gravity="center"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:background="@color/bg_header"/>
+
+    <!-- Canvas de trajetória -->
+    <com.quiosquelitoral.gunboundguide.TrajectoryView
+        android:id="@+id/trajectoryView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <!-- Seleção de Mobile -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/bg_header"
+        android:scrollbars="none">
+        <LinearLayout
+            android:id="@+id/mobileContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="6dp"
+            android:gravity="center_vertical"/>
+    </HorizontalScrollView>
+
+    <!-- Painel de controles -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/bg_panel"
+        android:padding="12dp">
+
+        <!-- Linha: Ângulo -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ângulo"
+                android:textColor="@color/label_color"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:minWidth="70dp"/>
+            <SeekBar
+                android:id="@+id/seekAngle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:progressTint="@color/accent_green"
+                android:thumbTint="@color/accent_green"/>
+            <TextView
+                android:id="@+id/tvAngleValue"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:text="45°"
+                android:textColor="@color/accent_green"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:gravity="end"/>
+        </LinearLayout>
+
+        <!-- Linha: Força -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Força"
+                android:textColor="@color/label_color"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:minWidth="70dp"/>
+            <SeekBar
+                android:id="@+id/seekPower"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:progressTint="@color/accent_orange"
+                android:thumbTint="@color/accent_orange"/>
+            <TextView
+                android:id="@+id/tvPowerValue"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:text="50"
+                android:textColor="@color/accent_orange"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:gravity="end"/>
+        </LinearLayout>
+
+        <!-- Linha: Vento -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vento"
+                android:textColor="@color/label_color"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:minWidth="70dp"/>
+            <SeekBar
+                android:id="@+id/seekWind"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:progressTint="@color/accent_blue"
+                android:thumbTint="@color/accent_blue"/>
+            <TextView
+                android:id="@+id/tvWindValue"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@color/accent_blue"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:gravity="end"/>
+        </LinearLayout>
+
+        <!-- Botão de direção -->
+        <Button
+            android:id="@+id/btnDirection"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:text="→  DIREITA"
+            android:textColor="@color/bg_dark"
+            android:textStyle="bold"
+            android:backgroundTint="@color/accent_gold"
+            android:fontFamily="monospace"/>
+
+    </LinearLayout>
+
+</LinearLayout>
