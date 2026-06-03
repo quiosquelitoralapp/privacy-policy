@@ -1,0 +1,12 @@
+# Build outputs
+build_out/
+*.apk
+
+# Gradle cache
+.gradle/
+
+# Downloaded packages
+*.deb
+
+# Local SDK config
+local.properties
