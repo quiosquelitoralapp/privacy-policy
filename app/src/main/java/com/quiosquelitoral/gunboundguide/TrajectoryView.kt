@@ -110,6 +110,7 @@ class TrajectoryView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        if (width <= 0 || height <= 0) return
         val w = width.toFloat()
         val h = height.toFloat()
         val groundY = h * 0.80f
@@ -198,11 +199,15 @@ class TrajectoryView @JvmOverloads constructor(
 
     private fun drawTrajectoryPath(canvas: Canvas, points: List<TrajectoryPoint>, paint: Paint) {
         if (points.size < 2) return
+        val step = maxOf(1, points.size / 120)
         val path = Path()
         path.moveTo(points[0].x, points[0].y)
-        for (i in 1 until points.size) {
+        var i = step
+        while (i < points.size) {
             path.lineTo(points[i].x, points[i].y)
+            i += step
         }
+        path.lineTo(points.last().x, points.last().y)
         canvas.drawPath(path, paint)
     }
 

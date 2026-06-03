@@ -62,7 +62,12 @@ class FloatingWindowService : Service() {
 
         setupDrag()
         setupControls()
-        windowManager.addView(floatingView, floatingParams)
+        try {
+            windowManager.addView(floatingView, floatingParams)
+        } catch (e: Exception) {
+            isRunning = false
+            stopSelf()
+        }
     }
 
     private fun setupDrag() {
@@ -79,7 +84,7 @@ class FloatingWindowService : Service() {
                 MotionEvent.ACTION_MOVE -> {
                     floatingParams.x = initialX + (event.rawX - initialTouchX).toInt()
                     floatingParams.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(floatingView, floatingParams)
+                    try { windowManager.updateViewLayout(floatingView, floatingParams) } catch (e: Exception) {}
                     true
                 }
                 else -> false

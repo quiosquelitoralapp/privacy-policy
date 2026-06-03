@@ -15,7 +15,7 @@ data class TrajectoryResult(
 
 object GunboundPhysics {
 
-    private const val MAX_STEPS = 8000
+    private const val MAX_STEPS = 2000
 
     fun simulate(
         startX: Float,
