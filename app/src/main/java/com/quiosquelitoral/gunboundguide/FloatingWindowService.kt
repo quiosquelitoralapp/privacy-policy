@@ -37,11 +37,12 @@ class FloatingWindowService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+        toast("Servico iniciado!")
         try {
             createNotificationChannel()
             startForeground(NOTIF_ID, buildNotification())
         } catch (e: Exception) {
-            // Android 14 pode rejeitar startForeground sem tipo — continua sem notificação
+            // Android 14 may reject startForeground without type — continues without notification
         }
         createFloatingWindow()
     }

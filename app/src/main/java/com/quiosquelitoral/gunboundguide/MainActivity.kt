@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.widget.*
 
@@ -41,16 +43,18 @@ class MainActivity : Activity() {
 
     private fun toggleOverlay() {
         if (!hasOverlayPermission()) {
-            Toast.makeText(this, "Ative a permissão 'Exibir sobre outros apps' primeiro!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Ative a permissao 'Exibir sobre outros apps' primeiro!", Toast.LENGTH_LONG).show()
             openOverlayPermission()
             return
         }
         if (FloatingWindowService.isRunning) {
             stopService(Intent(this, FloatingWindowService::class.java))
+            Handler(Looper.getMainLooper()).postDelayed({ updateUI() }, 400)
         } else {
             startService(Intent(this, FloatingWindowService::class.java))
+            Toast.makeText(this, "Iniciando overlay...", Toast.LENGTH_SHORT).show()
+            Handler(Looper.getMainLooper()).postDelayed({ updateUI() }, 1000)
         }
-        updateUI()
     }
 
     private fun openOverlayPermission() {
@@ -77,7 +81,7 @@ class MainActivity : Activity() {
 
         when {
             !hasPermission -> {
-                statusText.text = "Permissao necessaria\npara exibir sobre outros apps"
+                statusText.text = "PASSO 1: Toque em\n'CONCEDER PERMISSAO'\ne ative 'Exibir sobre outros apps'"
                 btnStartOverlay.text = "INICIAR OVERLAY"
             }
             overlayActive -> {

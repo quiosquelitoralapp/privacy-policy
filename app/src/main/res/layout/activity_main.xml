@@ -56,17 +56,18 @@
     <Button
         android:id="@+id/btnPermission"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="ATIVAR PERMISSAO DE OVERLAY"
+        android:layout_height="56dp"
+        android:text="CONCEDER PERMISSAO"
         android:textColor="#000000"
-        android:textSize="13sp"
-        android:background="#FFD700"
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:background="#FF6600"
         android:visibility="gone"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Como usar:\n1. Toque em INICIAR OVERLAY\n2. Abra o Gunbound\n3. O guia aparece por cima do jogo\n4. Arraste pelo cabecalho para mover"
+        android:text="Como usar:\n1. Toque CONCEDER PERMISSAO (1a vez)\n2. Ative 'Exibir sobre outros apps'\n3. Volte aqui e toque INICIAR OVERLAY\n4. Abra o Gunbound\n5. Arraste pelo cabecalho verde"
         android:textColor="#666666"
         android:textSize="13sp"
         android:gravity="center"
