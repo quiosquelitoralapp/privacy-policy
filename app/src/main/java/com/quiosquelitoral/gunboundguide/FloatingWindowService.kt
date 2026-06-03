@@ -102,9 +102,9 @@ class FloatingWindowService : Service() {
             val dm = resources.displayMetrics
             screenW = dm.widthPixels; screenH = dm.heightPixels
             gov.screenW  = screenW.toFloat()
-            gov.charX    = screenW * 0.25f
-            gov.charY    = screenH * 0.55f
-            gov.groundY  = screenH * 0.58f
+            gov.charX    = screenW * 0.30f    // ~30% da largura (posição típica no jogo)
+            gov.charY    = screenH * 0.45f    // ~45% da altura (plataforma média)
+            gov.groundY  = screenH * 0.80f    // fundo conservador (abaixo do campo)
             gov.angle    = 45f
             gov.power    = power
             gov.facingRight = facingRight
@@ -190,9 +190,9 @@ class FloatingWindowService : Service() {
             // Ativa overlay imediatamente com posição padrão antes de detectar
             gameOverlayView?.let { gov ->
                 gov.screenW  = screenW.toFloat()
-                gov.charX    = screenW * 0.25f
-                gov.charY    = screenH * 0.55f
-                gov.groundY  = screenH * 0.58f
+                gov.charX    = screenW * 0.30f
+                gov.charY    = screenH * 0.45f
+                gov.groundY  = screenH * 0.80f
                 gov.angle    = 45f
                 gov.power    = power
                 gov.facingRight = facingRight
@@ -262,13 +262,12 @@ class FloatingWindowService : Service() {
             } catch (e: Throwable) {}
         }
 
-        // 2. Personagem — scan em tela inteira (5%-90%)
-        val charPos = CharacterFinder.find(bmp)
+        // 2. Personagem — busca etiqueta de nome azul/navy
+        val charPos = CharacterFinder.find(bmp, facingRight)
 
-        // 3. Ângulo de mira a partir do personagem detectado
-        val charForAim = charPos
-        val detectedAngle = if (charForAim != null)
-            AimDetector.detect(bmp, charForAim.x, charForAim.groundY, facingRight)
+        // 3. Ângulo de mira: arco azul-ciano a partir do canhão detectado
+        val detectedAngle = if (charPos != null)
+            AimDetector.detect(bmp, charPos.cannonX, charPos.cannonY, facingRight)
         else null
 
         mainHandler.post {
@@ -280,11 +279,11 @@ class FloatingWindowService : Service() {
                 windV = windResult.windV
             }
 
-            // Posição do personagem (atualiza se encontrou, senão mantém padrão)
+            // Posição do personagem
             if (charPos != null) {
-                gov.charX   = charPos.x.toFloat()
-                gov.charY   = charPos.groundY.toFloat()
-                gov.groundY = charPos.groundY.toFloat()
+                gov.charX   = charPos.cannonX.toFloat()
+                gov.charY   = charPos.cannonY.toFloat()
+                gov.groundY = (screenH * 0.80f)   // fundo conservador
             }
 
             // Ângulo (atualiza se detectado)

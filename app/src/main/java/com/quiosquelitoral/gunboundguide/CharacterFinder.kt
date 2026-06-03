@@ -4,74 +4,87 @@ import android.graphics.Bitmap
 
 object CharacterFinder {
 
-    data class CharPosition(val x: Int, val nameY: Int, val groundY: Int)
-
-    private const val BRIGHT = 185   // limiar de pixel "aceso" para texto de nome
-    private const val MIN_RUN = 18   // mín de pixels consecutivos (letra de nome)
-    private const val MAX_RUN = 160  // máx (evita pegar HUD inteiro)
+    data class CharPosition(
+        val labelX: Int,   // centro horizontal da etiqueta de nome
+        val labelY: Int,   // y da etiqueta de nome
+        val cannonX: Int,  // x estimado do canhão (à frente da etiqueta)
+        val cannonY: Int,  // y estimado do canhão (abaixo da etiqueta)
+        val groundY: Int   // y estimado do chão/plataforma
+    )
 
     /**
-     * Varre a porção inferior da tela (30%-82%) procurando a faixa horizontal
-     * de pixels brilhantes que forma a etiqueta de nome acima do personagem.
-     * Retorna a posição estimada do personagem ou null se não encontrado.
+     * Detecta a etiqueta de nome do personagem buscando faixas horizontais
+     * com pixels de fundo azul/navy (cor do banner "NOITE4i20" no Gunbound Mobile).
+     *
+     * Critério de cor azul-dominante: b > 100 && b > r+30 && g > 40
      */
-    fun find(bmp: Bitmap): CharPosition? {
+    fun find(bmp: Bitmap, facingRight: Boolean = true): CharPosition? {
         val w = bmp.width
         val h = bmp.height
 
-        // Extrai todos os pixels de uma vez (muito mais rápido que getPixel em loop)
         val pixels = IntArray(w * h)
         bmp.getPixels(pixels, 0, w, 0, 0, w, h)
 
-        val y1 = (h * 0.05).toInt()   // personagens podem estar no topo
-        val y2 = (h * 0.90).toInt()
+        // Busca na área do jogo: 5% a 80% da altura (acima da barra de ação)
+        val y1 = (h * 0.05).toInt()
+        val y2 = (h * 0.80).toInt()
 
         var bestScore = 0
-        var bestX = w / 2
+        var bestX = -1
         var bestY = -1
 
-        // Amostra a cada 3 linhas para velocidade
         var y = y1
         while (y < y2) {
             var maxRun = 0
-            var bestRunCenter = w / 2
-            var run = 0
             var runStart = 0
+            var run = 0
+            var bestRunCx = 0
 
-            // Amostra a cada 2 colunas
             var x = 0
             while (x < w) {
-                val p = pixels[y * w + x]
-                val gray = ((p shr 16 and 0xFF) * 299 + (p shr 8 and 0xFF) * 587 + (p and 0xFF) * 114) / 1000
-                if (gray > BRIGHT) {
+                val p  = pixels[y * w + x]
+                val r  = (p shr 16) and 0xFF
+                val g  = (p shr 8)  and 0xFF
+                val b  = p and 0xFF
+                val gray = (r * 299 + g * 587 + b * 114) / 1000
+
+                // Pixel de etiqueta: azul-dominante (fundo do banner) OU branco brilhante (texto)
+                val isLabel = (b > 100 && b > r + 30 && g > 40) || gray > 190
+
+                if (isLabel) {
                     run++
                 } else {
                     if (run > maxRun) {
                         maxRun = run
-                        bestRunCenter = runStart + run
+                        bestRunCx = runStart + run / 2
                     }
                     run = 0
                     runStart = x + 1
                 }
-                x += 2
+                x += 2   // amostra a cada 2px para velocidade
             }
             if (run > maxRun) {
                 maxRun = run
-                bestRunCenter = runStart + run
+                bestRunCx = runStart + run / 2
             }
 
-            if (maxRun in MIN_RUN..MAX_RUN && maxRun > bestScore) {
+            // Etiqueta de nome: 18-130 px de largura consecutiva
+            if (maxRun in 18..130 && maxRun > bestScore) {
                 bestScore = maxRun
-                bestX = bestRunCenter
+                bestX = bestRunCx
                 bestY = y
             }
             y += 3
         }
 
-        if (bestY < 0) return null
+        if (bestX < 0) return null
 
-        // O tanque está logo abaixo da etiqueta do nome; chão ~70px mais baixo
-        val groundY = (bestY + 70).coerceAtMost(h - 1)
-        return CharPosition(bestX, bestY, groundY)
+        // Canhão fica abaixo e à frente da etiqueta
+        val offsetX = if (facingRight) (w * 0.06).toInt() else -(w * 0.06).toInt()
+        val cannonX = (bestX + offsetX).coerceIn(0, w - 1)
+        val cannonY = (bestY + h * 0.08).toInt().coerceIn(0, h - 1)
+        val groundY = (bestY + h * 0.18).toInt().coerceIn(0, h - 1)
+
+        return CharPosition(bestX, bestY, cannonX, cannonY, groundY)
     }
 }
