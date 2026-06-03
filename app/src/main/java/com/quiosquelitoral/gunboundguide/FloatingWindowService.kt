@@ -98,6 +98,19 @@ class FloatingWindowService : Service() {
             gp.gravity = Gravity.TOP or Gravity.START
             wm.addView(gov, gp)
 
+            // Ativa overlay imediatamente com tela inteira (sem precisar de captura)
+            val dm = resources.displayMetrics
+            screenW = dm.widthPixels; screenH = dm.heightPixels
+            gov.screenW  = screenW.toFloat()
+            gov.charX    = screenW * 0.25f
+            gov.charY    = screenH * 0.55f
+            gov.groundY  = screenH * 0.58f
+            gov.angle    = 45f
+            gov.power    = power
+            gov.facingRight = facingRight
+            gov.mobile   = MobileData.mobiles[mobileIndex]
+            gov.active   = true
+
             // 2) Barra mínima de controle
             val bar = LayoutInflater.from(this).inflate(R.layout.floating_overlay, null)
             barView = bar
