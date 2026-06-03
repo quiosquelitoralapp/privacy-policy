@@ -29,6 +29,16 @@
             android:fontFamily="monospace"/>
 
         <Button
+            android:id="@+id/btnScanWind"
+            android:layout_width="36dp"
+            android:layout_height="24dp"
+            android:text="📷"
+            android:textSize="9sp"
+            android:background="#AA0055AA"
+            android:padding="0dp"
+            android:layout_marginRight="2dp"/>
+
+        <Button
             android:id="@+id/btnCollapseOverlay"
             android:layout_width="28dp"
             android:layout_height="24dp"
@@ -265,6 +275,16 @@
                     android:text="↓" android:textSize="11sp" android:textColor="#FFFFFF"
                     android:background="#003355" android:padding="0dp"/>
             </LinearLayout>
+
+            <!-- Preview do vento capturado -->
+            <ImageView
+                android:id="@+id/overlayWindPreview"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:scaleType="fitCenter"
+                android:background="#110D1B2A"
+                android:visibility="gone"
+                android:layout_marginBottom="3dp"/>
 
             <!-- Direção do personagem -->
             <Button

@@ -3,12 +3,18 @@ package com.quiosquelitoral.gunboundguide
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
+import android.graphics.*
 import android.graphics.PixelFormat
+import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
+import android.media.ImageReader
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.DisplayMetrics
 import android.view.*
 import android.widget.*
 
@@ -22,6 +28,8 @@ class FloatingWindowService : Service() {
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
+
+    private var mediaProjection: MediaProjection? = null
 
     companion object {
         const val ACTION_STOP = "STOP_OVERLAY"
@@ -105,12 +113,17 @@ class FloatingWindowService : Service() {
         view.findViewById(R.id.btnCloseOverlay).setOnClickListener { stopSelf() }
 
         var collapsed = false
-        val collapseBtn = view.findViewById(R.id.btnCollapseOverlay) as android.widget.Button
-        val content    = view.findViewById(R.id.overlayContent)      as android.view.ViewGroup
+        val collapseBtn  = view.findViewById(R.id.btnCollapseOverlay) as android.widget.Button
+        val content      = view.findViewById(R.id.overlayContent)     as android.view.ViewGroup
         collapseBtn.setOnClickListener {
             collapsed = !collapsed
             content.visibility = if (collapsed) android.view.View.GONE else android.view.View.VISIBLE
             collapseBtn.text   = if (collapsed) "▼" else "▲"
+        }
+
+        val previewImg = view.findViewById(R.id.overlayWindPreview) as ImageView
+        view.findViewById(R.id.btnScanWind).setOnClickListener {
+            captureWindRegion(previewImg)
         }
     }
 
@@ -244,13 +257,81 @@ class FloatingWindowService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) stopSelf()
+        if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
+        // Inicializa MediaProjection se disponível
+        try {
+            val resultCode = intent?.getIntExtra("proj_result", 0) ?: 0
+            @Suppress("DEPRECATION")
+            val data = intent?.getParcelableExtra("proj_data") as? Intent
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                val pm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
+                mediaProjection = pm?.getMediaProjection(resultCode, data)
+            }
+        } catch (e: Throwable) {}
         return START_NOT_STICKY
+    }
+
+    fun captureWindRegion(previewImage: ImageView) {
+        val proj = mediaProjection
+        if (proj == null) {
+            toast("Permissão de captura não concedida")
+            return
+        }
+        try {
+            val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val metrics = DisplayMetrics()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealMetrics(metrics)
+            val sw = metrics.widthPixels
+            val sh = metrics.heightPixels
+            val density = metrics.densityDpi
+
+            val reader = ImageReader.newInstance(sw, sh, PixelFormat.RGBA_8888, 2)
+            val vd: VirtualDisplay = proj.createVirtualDisplay(
+                "GBWindScan", sw, sh, density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                reader.surface, null, null
+            )
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    val image = reader.acquireLatestImage()
+                    if (image != null) {
+                        val plane = image.planes[0]
+                        val buf = plane.buffer
+                        val ps = plane.pixelStride
+                        val rs = plane.rowStride
+                        val bmp = Bitmap.createBitmap(rs / ps, sh, Bitmap.Config.ARGB_8888)
+                        bmp.copyPixelsFromBuffer(buf)
+                        image.close()
+
+                        // Recorta a faixa superior central (onde fica o indicador de vento)
+                        val cx = sw / 4
+                        val cw = sw / 2
+                        val ch = sh / 8
+                        val crop = Bitmap.createBitmap(bmp, cx, 0, cw, ch)
+
+                        Handler(Looper.getMainLooper()).post {
+                            previewImage.setImageBitmap(crop)
+                            previewImage.visibility = View.VISIBLE
+                        }
+                    }
+                } catch (e: Throwable) {
+                    toast("Erro captura: ${e.javaClass.simpleName}")
+                } finally {
+                    try { vd.release() } catch (e: Throwable) {}
+                    try { reader.close() } catch (e: Throwable) {}
+                }
+            }, 300)
+        } catch (e: Throwable) {
+            toast("Erro ao capturar: ${e.javaClass.simpleName}")
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        try { mediaProjection?.stop() } catch (e: Throwable) {}
         val v = floatingView
         val wm = windowManager
         if (v != null && wm != null) {

@@ -1,7 +1,9 @@
 package com.quiosquelitoral.gunboundguide
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -20,9 +22,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        statusText     = findViewById(R.id.tvStatus)        as TextView
+        statusText      = findViewById(R.id.tvStatus)        as TextView
         btnStartOverlay = findViewById(R.id.btnStartOverlay) as Button
-        btnPermission  = findViewById(R.id.btnPermission)   as Button
+        btnPermission   = findViewById(R.id.btnPermission)   as Button
 
         btnStartOverlay.setOnClickListener { toggleOverlay() }
         btnPermission.setOnClickListener { openOverlayPermission() }
@@ -51,25 +53,46 @@ class MainActivity : Activity() {
             stopService(Intent(this, FloatingWindowService::class.java))
             Handler(Looper.getMainLooper()).postDelayed({ updateUI() }, 400)
         } else {
-            startService(Intent(this, FloatingWindowService::class.java))
-            Toast.makeText(this, "Iniciando overlay...", Toast.LENGTH_SHORT).show()
-            Handler(Looper.getMainLooper()).postDelayed({ updateUI() }, 1000)
+            // Pede permissão de captura de tela antes de iniciar
+            try {
+                val pm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
+                if (pm != null) {
+                    startActivityForResult(pm.createScreenCaptureIntent(), 101)
+                } else {
+                    startOverlayService(null, 0)
+                }
+            } catch (e: Throwable) {
+                startOverlayService(null, 0)
+            }
         }
+    }
+
+    private fun startOverlayService(projData: Intent?, resultCode: Int) {
+        val intent = Intent(this, FloatingWindowService::class.java)
+        if (projData != null) {
+            intent.putExtra("proj_result", resultCode)
+            intent.putExtra("proj_data", projData)
+        }
+        startService(intent)
+        Toast.makeText(this, "Iniciando overlay...", Toast.LENGTH_SHORT).show()
+        Handler(Looper.getMainLooper()).postDelayed({ updateUI() }, 1000)
     }
 
     private fun openOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
+            startActivityForResult(
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")),
+                100
             )
-            startActivityForResult(intent, 100)
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 100) updateUI()
+        when (requestCode) {
+            100 -> updateUI()
+            101 -> startOverlayService(data, resultCode)
+        }
     }
 
     private fun updateUI() {

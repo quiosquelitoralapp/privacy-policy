@@ -44,6 +44,13 @@ class TrajectoryView @JvmOverloads constructor(
         pathEffect = DashPathEffect(floatArrayOf(12f, 6f), 0f)
     }
 
+    private val noWindPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#66FFFFFF")
+        strokeWidth = 2f
+        style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(6f, 9f), 0f)
+    }
+
     private val trajPaints = listOf(trajPaintGreen, trajPaintYellow)
 
     private val groundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -125,24 +132,35 @@ class TrajectoryView @JvmOverloads constructor(
         val shooterX = if (facingRight) w * 0.12f else w * 0.88f
         val shooterY = groundY
 
+        val hasWind = windSpeed != 0f || windSpeedY != 0f
+
+        // Trajetória SEM vento (branca tracejada) — referência de mira
+        val noWindResults = GunboundPhysics.simulate(
+            shooterX, shooterY, angle, power, 0f, 0f,
+            selectedMobile, facingRight, groundY, w
+        )
+        noWindResults.forEach { result ->
+            drawTrajectoryPath(canvas, result.points, noWindPaint)
+        }
+        noWindResults.forEach { result ->
+            if (result.points.isNotEmpty()) drawNoWindMarker(canvas, result.landingX, groundY)
+        }
+
+        // Trajetória COM vento (colorida) — onde o tiro vai cair de verdade
         val results = GunboundPhysics.simulate(
             shooterX, shooterY, angle, power, windSpeed, windSpeedY,
             selectedMobile, facingRight, groundY, w
         )
-
         results.forEachIndexed { idx, result ->
             drawTrajectoryPath(canvas, result.points, trajPaints[idx % trajPaints.size])
         }
-
         results.forEach { result ->
-            if (result.points.isNotEmpty()) {
-                drawLandingMarker(canvas, result.landingX, groundY)
-            }
+            if (result.points.isNotEmpty()) drawLandingMarker(canvas, result.landingX, groundY)
         }
 
         drawCannon(canvas, shooterX, shooterY)
         drawWindIndicator(canvas, w)
-        drawDistanceInfo(canvas, results, shooterX, groundY, w)
+        drawDistanceInfo(canvas, results, noWindResults, shooterX, groundY, w)
         drawAngleIndicator(canvas, shooterX, shooterY)
     }
 
@@ -222,6 +240,19 @@ class TrajectoryView @JvmOverloads constructor(
         canvas.drawLine(landX + r - 4, groundY - r + 4, landX - r + 4, groundY + r - 4, landingStrokePaint)
     }
 
+    private val noWindMarkerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#99FFFFFF")
+        strokeWidth = 2f
+        style = Paint.Style.STROKE
+    }
+
+    private fun drawNoWindMarker(canvas: Canvas, landX: Float, groundY: Float) {
+        val r = 10f
+        canvas.drawCircle(landX, groundY, r, noWindMarkerPaint)
+        canvas.drawLine(landX - r, groundY, landX + r, groundY, noWindMarkerPaint)
+        canvas.drawLine(landX, groundY - r, landX, groundY + r, noWindMarkerPaint)
+    }
+
     private fun drawWindIndicator(canvas: Canvas, w: Float) {
         val cx = w / 2f
         val hSpeed = abs(windSpeed)
@@ -269,19 +300,24 @@ class TrajectoryView @JvmOverloads constructor(
         canvas.drawArc(rect, startAngleDeg, if (facingRight) angle else -angle, false, arcPaint)
     }
 
-    private fun drawDistanceInfo(canvas: Canvas, results: List<TrajectoryResult>, shooterX: Float, groundY: Float, w: Float) {
-        val yBase = groundY + 28f
+    private fun drawDistanceInfo(canvas: Canvas, results: List<TrajectoryResult>, noWindResults: List<TrajectoryResult>, shooterX: Float, groundY: Float, w: Float) {
+        val yBase = groundY + 22f
+        // Sem vento (branco)
+        if (noWindResults.isNotEmpty()) {
+            textPaint.textSize = 24f
+            textPaint.color = Color.parseColor("#99FFFFFF")
+            canvas.drawText("○ SEM VENTO: ${noWindResults[0].landingX.toInt()}px", 12f, yBase, textPaint)
+        }
+        // Com vento (colorido)
         results.forEachIndexed { idx, result ->
-            val dist = result.distance.toInt()
-            val labelPart = if (result.label.isNotEmpty()) "${result.label}: " else ""
-            val text = "$labelPart${dist}px"
-            textPaint.textSize = 28f
+            val labelPart = if (result.label.isNotEmpty()) "${result.label} " else ""
+            textPaint.textSize = 26f
             textPaint.color = if (idx == 0) Color.parseColor("#00FF88") else Color.parseColor("#FFD700")
-            canvas.drawText(text, 12f, yBase + idx * 34f, textPaint)
+            canvas.drawText("● ${labelPart}c/vento: ${result.landingX.toInt()}px", 12f, yBase + 28f + idx * 28f, textPaint)
         }
 
         // Mobile name top-left
-        textPaint.textSize = 26f
+        textPaint.textSize = 24f
         textPaint.color = Color.parseColor("#AAAAAA")
         canvas.drawText(selectedMobile.displayName.toUpperCase(), 12f, 30f, textPaint)
     }
