@@ -21,48 +21,42 @@ import java.util.concurrent.Executors
 
 class FloatingWindowService : Service() {
 
-    // ── WindowManager ──────────────────────────────────────────────
     private var windowManager: WindowManager? = null
 
-    // Overlay de controles (pequeno, arrastável)
-    private var controlView: View? = null
-    private var controlParams: WindowManager.LayoutParams? = null
-    private var ctrlInitialX = 0; private var ctrlInitialY = 0
-    private var ctrlTouchX = 0f; private var ctrlTouchY = 0f
-
-    // Overlay full-screen transparente (trajetória)
+    // Overlay full-screen transparente (trajetórias)
     private var gameOverlayView: GameOverlayView? = null
-    private var gameOverlayParams: WindowManager.LayoutParams? = null
 
-    // ── MediaProjection / VirtualDisplay ───────────────────────────
+    // Barra de controle mínima (arrasto + mobile + direção + fechar)
+    private var barView: View? = null
+    private var barParams: WindowManager.LayoutParams? = null
+    private var barIX = 0; private var barIY = 0
+    private var barTX = 0f; private var barTY = 0f
+
+    // MediaProjection
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
     private var screenW = 1080; private var screenH = 1920; private var screenDpi = 480
 
-    // ── Estado do jogo ─────────────────────────────────────────────
-    private var angle    = 45
-    private var power    = 50
-    private var windH    = 0; private var windHDir = 1
-    private var windV    = 0; private var windVDir = 1
+    // Estado detectado automaticamente
+    private var windH = 0f
+    private var windV = 0f
+    private var power = 70f        // valor padrão razoável
     private var facingRight = true
-    private var autoAngle   = false   // true quando AimDetector encontrou ângulo
+    private var mobileIndex = 0
 
-    // ── Views do painel de controle ────────────────────────────────
-    private var tvAngle: TextView? = null
-    private var tvPower: TextView? = null
-    private var tvWindH: TextView? = null
-    private var tvWindV: TextView? = null
-
-    // ── Loop de scan ───────────────────────────────────────────────
-    private val mainHandler  = Handler(Looper.getMainLooper())
-    private val bgExecutor   = Executors.newSingleThreadExecutor()
+    // Loop de scan
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val bgExecutor  = Executors.newSingleThreadExecutor()
     private var scanRunnable: Runnable? = null
     private var scanActive = false
 
+    // Referência ao botão de mobile para atualizar o texto
+    private var btnMobile: Button? = null
+
     companion object {
         const val ACTION_STOP = "STOP_OVERLAY"
-        const val NOTIF_ID = 1
+        const val NOTIF_ID   = 1
         const val CHANNEL_ID = "gb_overlay"
         const val TYPE_OVERLAY_VALUE = 2038
         var isRunning = false
@@ -80,8 +74,6 @@ class FloatingWindowService : Service() {
         createOverlays()
     }
 
-    // ── Criação dos dois overlays ──────────────────────────────────
-
     private fun createOverlays() {
         try {
             val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -91,7 +83,7 @@ class FloatingWindowService : Service() {
             val type = if (Build.VERSION.SDK_INT >= 26) TYPE_OVERLAY_VALUE
                        else WindowManager.LayoutParams.TYPE_PHONE
 
-            // 1) Overlay full-screen transparente (jogo)
+            // 1) Overlay full-screen transparente para desenhar trajetórias
             val gov = GameOverlayView(this)
             gameOverlayView = gov
             val gp = WindowManager.LayoutParams(
@@ -104,13 +96,12 @@ class FloatingWindowService : Service() {
                 PixelFormat.TRANSLUCENT
             )
             gp.gravity = Gravity.TOP or Gravity.START
-            gameOverlayParams = gp
             wm.addView(gov, gp)
 
-            // 2) Painel de controle (260dp, arrastável)
-            val ctrlView = LayoutInflater.from(this).inflate(R.layout.floating_overlay, null)
-            controlView = ctrlView
-            val cp = WindowManager.LayoutParams(
+            // 2) Barra mínima de controle
+            val bar = LayoutInflater.from(this).inflate(R.layout.floating_overlay, null)
+            barView = bar
+            val bp = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 type,
@@ -118,131 +109,58 @@ class FloatingWindowService : Service() {
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT
             )
-            cp.gravity = Gravity.TOP or Gravity.START
-            cp.x = 16; cp.y = 100
-            controlParams = cp
-            setupControlDrag(ctrlView, wm, cp)
-            setupControls(ctrlView)
-            wm.addView(ctrlView, cp)
+            bp.gravity = Gravity.TOP or Gravity.START
+            bp.x = 12; bp.y = 60
+            barParams = bp
+            setupBar(bar, wm, bp)
+            wm.addView(bar, bp)
 
-            toast("Overlay ativo! Abra o Gunbound.")
         } catch (e: Throwable) {
             toast("Erro overlay: ${e.javaClass.simpleName}: ${e.message?.take(60)}")
-            isRunning = false
-            stopSelf()
+            isRunning = false; stopSelf()
         }
     }
 
-    // ── Drag do painel de controle ─────────────────────────────────
-
-    private fun setupControlDrag(v: View, wm: WindowManager, p: WindowManager.LayoutParams) {
-        v.findViewById(R.id.floatingHeader).setOnTouchListener { _, event ->
-            when (event.action) {
+    private fun setupBar(bar: View, wm: WindowManager, bp: WindowManager.LayoutParams) {
+        // Drag pela barra inteira (exceto botões)
+        bar.findViewById(R.id.floatingHeader).setOnTouchListener { _, ev ->
+            when (ev.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    ctrlInitialX = p.x; ctrlInitialY = p.y
-                    ctrlTouchX = event.rawX; ctrlTouchY = event.rawY; true
+                    barIX = bp.x; barIY = bp.y; barTX = ev.rawX; barTY = ev.rawY; true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    p.x = ctrlInitialX + (event.rawX - ctrlTouchX).toInt()
-                    p.y = ctrlInitialY + (event.rawY - ctrlTouchY).toInt()
-                    try { wm.updateViewLayout(v, p) } catch (e: Throwable) {}; true
+                    bp.x = barIX + (ev.rawX - barTX).toInt()
+                    bp.y = barIY + (ev.rawY - barTY).toInt()
+                    try { wm.updateViewLayout(bar, bp) } catch (e: Throwable) {}; true
                 }
                 else -> false
             }
         }
-        v.findViewById(R.id.btnCloseOverlay).setOnClickListener { stopSelf() }
 
-        var collapsed = false
-        val collapseBtn = v.findViewById(R.id.btnCollapseOverlay) as Button
-        val content     = v.findViewById(R.id.overlayContent) as ViewGroup
-        collapseBtn.setOnClickListener {
-            collapsed = !collapsed
-            content.visibility = if (collapsed) View.GONE else View.VISIBLE
-            collapseBtn.text   = if (collapsed) "▼" else "▲"
-        }
-    }
-
-    // ── Controles do painel ────────────────────────────────────────
-
-    private fun setupControls(v: View) {
-        tvAngle = v.findViewById(R.id.overlayAngleValue)    as TextView
-        tvPower = v.findViewById(R.id.overlayPowerValue)    as TextView
-        tvWindH = v.findViewById(R.id.overlayWindValue)     as TextView
-        tvWindV = v.findViewById(R.id.overlayWindVertValue) as TextView
-
-        val tv  = gameOverlayView!!
-        val db  = v.findViewById(R.id.overlayBtnDirection) as Button
-        val mc  = v.findViewById(R.id.overlayMobileContainer) as LinearLayout
-
-        // Mobile buttons
-        val btns = mutableListOf<Button>()
-        MobileData.mobiles.forEachIndexed { i, mobile ->
-            val btn = Button(this).apply {
-                text = mobile.displayName; textSize = 9f; setAllCaps(false)
-                setPadding(8, 2, 8, 2)
-                setBackgroundColor(Color.parseColor("#1E3A5A"))
-                setTextColor(Color.WHITE)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.setMargins(2, 2, 2, 2) }
-            }
-            btn.setOnClickListener {
-                btns.forEachIndexed { j, b ->
-                    if (j == i) { b.setBackgroundColor(Color.parseColor("#00FF88")); b.setTextColor(Color.BLACK) }
-                    else        { b.setBackgroundColor(Color.parseColor("#1E3A5A")); b.setTextColor(Color.WHITE) }
-                }
-                tv.mobile = MobileData.mobiles[i]
-                tv.invalidate()
-            }
-            btns.add(btn); mc.addView(btn)
-        }
-        btns[0].setBackgroundColor(Color.parseColor("#00FF88"))
-        btns[0].setTextColor(Color.BLACK)
-
-        fun pushUpdate() {
-            tv.angle = angle.toFloat(); tv.power = power.toFloat()
-            tv.windH = (windH * windHDir).toFloat()
-            tv.windV = (windV * windVDir).toFloat()
-            tv.facingRight = facingRight
-            tv.invalidate()
-            tvAngle?.text = "$angle°"
-            tvPower?.text = "$power"
-            tvWindH?.text = "${if (windHDir > 0) "→" else "←"}$windH"
-            tvWindV?.text = "${if (windVDir > 0) "↓" else "↑"}$windV"
-        }
-        pushUpdate()
-
-        v.findViewById(R.id.btnAngleMinus5).setOnClickListener { angle = (angle-5).coerceAtLeast(0); pushUpdate() }
-        v.findViewById(R.id.btnAngleMinus1).setOnClickListener { angle = (angle-1).coerceAtLeast(0); pushUpdate() }
-        v.findViewById(R.id.btnAnglePlus1) .setOnClickListener { angle = (angle+1).coerceAtMost(90); pushUpdate() }
-        v.findViewById(R.id.btnAnglePlus5) .setOnClickListener { angle = (angle+5).coerceAtMost(90); pushUpdate() }
-
-        v.findViewById(R.id.btnPowerMinus5).setOnClickListener { power = (power-5).coerceAtLeast(0);   pushUpdate() }
-        v.findViewById(R.id.btnPowerMinus1).setOnClickListener { power = (power-1).coerceAtLeast(0);   pushUpdate() }
-        v.findViewById(R.id.btnPowerPlus1) .setOnClickListener { power = (power+1).coerceAtMost(100);  pushUpdate() }
-        v.findViewById(R.id.btnPowerPlus5) .setOnClickListener { power = (power+5).coerceAtMost(100);  pushUpdate() }
-
-        v.findViewById(R.id.btnWindLeft) .setOnClickListener { windHDir = -1; pushUpdate() }
-        v.findViewById(R.id.btnWindRight).setOnClickListener { windHDir =  1; pushUpdate() }
-        v.findViewById(R.id.btnWindMinus).setOnClickListener { windH = (windH-1).coerceAtLeast(0); pushUpdate() }
-        v.findViewById(R.id.btnWindPlus) .setOnClickListener { windH = (windH+1).coerceAtMost(10); pushUpdate() }
-
-        v.findViewById(R.id.btnWindUp)       .setOnClickListener { windVDir = -1; pushUpdate() }
-        v.findViewById(R.id.btnWindDown)     .setOnClickListener { windVDir =  1; pushUpdate() }
-        v.findViewById(R.id.btnWindVertMinus).setOnClickListener { windV = (windV-1).coerceAtLeast(0); pushUpdate() }
-        v.findViewById(R.id.btnWindVertPlus) .setOnClickListener { windV = (windV+1).coerceAtMost(10); pushUpdate() }
-
-        var right = true
-        db.text = "-> DIREITA"
-        db.setOnClickListener {
-            right = !right; facingRight = right
-            db.text = if (right) "-> DIREITA" else "<- ESQUERDA"
-            pushUpdate()
+        // Cicla mobiles
+        val mob = bar.findViewById(R.id.btnMobileCycle) as Button
+        btnMobile = mob
+        mob.text = MobileData.mobiles[mobileIndex].displayName
+        mob.setOnClickListener {
+            mobileIndex = (mobileIndex + 1) % MobileData.mobiles.size
+            val m = MobileData.mobiles[mobileIndex]
+            mob.text = m.displayName
+            gameOverlayView?.mobile = m
+            gameOverlayView?.invalidate()
         }
 
-        // Botão 📷: scan manual imediato
-        v.findViewById(R.id.btnScanWind).setOnClickListener { doScan() }
+        // Direção
+        val faceBtn = bar.findViewById(R.id.btnFacing) as Button
+        faceBtn.text = "→"
+        faceBtn.setOnClickListener {
+            facingRight = !facingRight
+            faceBtn.text = if (facingRight) "→" else "←"
+            gameOverlayView?.facingRight = facingRight
+            gameOverlayView?.invalidate()
+        }
+
+        // Fechar
+        bar.findViewById(R.id.btnCloseOverlay).setOnClickListener { stopSelf() }
     }
 
     // ── VirtualDisplay persistente ─────────────────────────────────
@@ -272,31 +190,31 @@ class FloatingWindowService : Service() {
 
     private fun captureFrame(): Bitmap? {
         return try {
-            val image = imageReader?.acquireLatestImage() ?: return null
-            val plane = image.planes[0]
+            val img = imageReader?.acquireLatestImage() ?: return null
+            val pl  = img.planes[0]
             val bmp = Bitmap.createBitmap(
-                plane.rowStride / plane.pixelStride, screenH, Bitmap.Config.ARGB_8888
+                pl.rowStride / pl.pixelStride, screenH, Bitmap.Config.ARGB_8888
             )
-            bmp.copyPixelsFromBuffer(plane.buffer)
-            image.close()
+            bmp.copyPixelsFromBuffer(pl.buffer)
+            img.close()
             bmp
         } catch (e: Throwable) { null }
     }
 
-    // ── Loop de scan automático (a cada 900ms) ─────────────────────
+    // ── Loop de scan ───────────────────────────────────────────────
 
     private fun startScanLoop() {
         scanActive = true
         val run = object : Runnable {
             override fun run() {
-                if (scanActive) {
-                    doScan()
-                    mainHandler.postDelayed(this, 900)
-                }
+                if (!scanActive) return
+                val bmp = captureFrame()
+                if (bmp != null) bgExecutor.execute { processScan(bmp) }
+                mainHandler.postDelayed(this, 900)
             }
         }
         scanRunnable = run
-        mainHandler.postDelayed(run, 800)
+        mainHandler.postDelayed(run, 600)
     }
 
     private fun stopScanLoop() {
@@ -304,51 +222,32 @@ class FloatingWindowService : Service() {
         scanRunnable?.let { mainHandler.removeCallbacks(it) }
     }
 
-    private fun doScan() {
-        // Captura no main thread (necessário para VirtualDisplay)
-        val bmp = captureFrame() ?: return
-        bgExecutor.execute { processScan(bmp) }
-    }
-
-    /**
-     * Roda em background thread. Detecta: vento, personagem, ângulo.
-     * Atualiza o GameOverlayView no main thread.
-     */
     private fun processScan(bmp: Bitmap) {
         // 1. Vento — faixa superior central
-        val cx = screenW / 4
-        val cw = screenW / 2
-        val ch = screenH / 8
         val windCrop = try {
-            Bitmap.createBitmap(bmp, cx, 0, cw, ch)
+            Bitmap.createBitmap(bmp, screenW / 4, 0, screenW / 2, screenH / 8)
         } catch (e: Throwable) { null }
-
         val windResult = windCrop?.let { WindDetector.detect(it) }
 
-        // 2. Personagem pela etiqueta de nome
+        // 2. Personagem
         val charPos = CharacterFinder.find(bmp)
 
-        // 3. Ângulo de mira (varredura radial a partir do personagem)
+        // 3. Ângulo de mira a partir do personagem
         val detectedAngle = if (charPos != null)
             AimDetector.detect(bmp, charPos.x, charPos.groundY, facingRight)
         else null
 
-        // 4. Atualiza UI no main thread
         mainHandler.post {
+            val gov = gameOverlayView ?: return@post
             var changed = false
 
             if (windResult != null && windResult.confidence >= 0.45f) {
-                windH    = windResult.magnitude
-                windHDir = if (windResult.windH >= 0f) 1 else -1
-                windV    = kotlin.math.abs(windResult.windV).toInt()
-                windVDir = if (windResult.windV >= 0f) 1 else -1
-                tvWindH?.text = "${if (windHDir > 0) "→" else "←"}$windH"
-                tvWindV?.text = "${if (windVDir > 0) "↓" else "↑"}$windV"
+                windH = windResult.windH
+                windV = windResult.windV
                 changed = true
             }
 
             if (charPos != null) {
-                val gov = gameOverlayView ?: return@post
                 gov.charX   = charPos.x.toFloat()
                 gov.charY   = charPos.groundY.toFloat()
                 gov.groundY = charPos.groundY.toFloat()
@@ -357,19 +256,16 @@ class FloatingWindowService : Service() {
             }
 
             if (detectedAngle != null) {
-                angle = detectedAngle.toInt()
-                autoAngle = true
-                tvAngle?.text = "~$angle°"
+                gov.angle = detectedAngle
                 changed = true
             }
 
             if (changed) {
-                val gov = gameOverlayView ?: return@post
-                gov.windH = (windH * windHDir).toFloat()
-                gov.windV = (windV * windVDir).toFloat()
-                gov.angle = angle.toFloat()
-                gov.power = power.toFloat()
+                gov.windH       = windH
+                gov.windV       = windV
+                gov.power       = power
                 gov.facingRight = facingRight
+                gov.mobile      = MobileData.mobiles[mobileIndex]
                 gov.invalidate()
             }
         }
@@ -387,11 +283,7 @@ class FloatingWindowService : Service() {
                 val pm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
                 mediaProjection = pm?.getMediaProjection(resultCode, data)
                 if (mediaProjection != null) {
-                    // Pequeno delay para VirtualDisplay inicializar
-                    mainHandler.postDelayed({
-                        initCapture()
-                        startScanLoop()
-                    }, 500)
+                    mainHandler.postDelayed({ initCapture(); startScanLoop() }, 500)
                 }
             }
         } catch (e: Throwable) {}
@@ -410,10 +302,8 @@ class FloatingWindowService : Service() {
         try { mediaProjection?.stop() }  catch (e: Throwable) {}
         val wm = windowManager
         gameOverlayView?.let { try { wm?.removeView(it) } catch (e: Throwable) {} }
-        controlView?.let    { try { wm?.removeView(it) } catch (e: Throwable) {} }
+        barView?.let         { try { wm?.removeView(it) } catch (e: Throwable) {} }
     }
-
-    // ── Notificação ────────────────────────────────────────────────
 
     private fun toast(msg: String) {
         mainHandler.post { Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show() }
@@ -439,7 +329,7 @@ class FloatingWindowService : Service() {
         val pi = PendingIntent.getService(this, 0, stop, flags)
         val b = Notification.Builder(this)
             .setContentTitle("Gunbound Guia de Mira")
-            .setContentText("Overlay ativo – detectando vento e mira")
+            .setContentText("Detectando vento e mira automaticamente")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Fechar", pi)
         if (Build.VERSION.SDK_INT >= 26) {
