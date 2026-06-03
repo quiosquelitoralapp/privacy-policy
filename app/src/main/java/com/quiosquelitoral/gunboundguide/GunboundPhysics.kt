@@ -22,7 +22,8 @@ object GunboundPhysics {
         startY: Float,
         angleDeg: Float,
         power: Float,
-        windValue: Float,
+        windX: Float,
+        windY: Float,
         mobile: Mobile,
         facingRight: Boolean,
         groundY: Float,
@@ -30,11 +31,11 @@ object GunboundPhysics {
     ): List<TrajectoryResult> {
         return when (mobile.shotType) {
             ShotType.SPREAD -> listOf(
-                simulateSingle(startX, startY, angleDeg + mobile.spreadAngle / 2f, power, windValue, mobile, facingRight, groundY, canvasWidth, "Tiro 1"),
-                simulateSingle(startX, startY, angleDeg - mobile.spreadAngle / 2f, power, windValue, mobile, facingRight, groundY, canvasWidth, "Tiro 2")
+                simulateSingle(startX, startY, angleDeg + mobile.spreadAngle / 2f, power, windX, windY, mobile, facingRight, groundY, canvasWidth, "Tiro 1"),
+                simulateSingle(startX, startY, angleDeg - mobile.spreadAngle / 2f, power, windX, windY, mobile, facingRight, groundY, canvasWidth, "Tiro 2")
             )
             else -> listOf(
-                simulateSingle(startX, startY, angleDeg, power, windValue, mobile, facingRight, groundY, canvasWidth, "")
+                simulateSingle(startX, startY, angleDeg, power, windX, windY, mobile, facingRight, groundY, canvasWidth, "")
             )
         }
     }
@@ -44,7 +45,8 @@ object GunboundPhysics {
         startY: Float,
         angleDeg: Float,
         power: Float,
-        windValue: Float,
+        windX: Float,
+        windY: Float,
         mobile: Mobile,
         facingRight: Boolean,
         groundY: Float,
@@ -65,9 +67,9 @@ object GunboundPhysics {
         val maxBounces = if (mobile.shotType == ShotType.BOUNCE) 1 else 0
 
         for (step in 0 until MAX_STEPS) {
-            vx += windValue * mobile.windFactor
+            vx += windX * mobile.windFactor
+            vy += windY * mobile.windFactor  // vento vertical: positivo = empurra pra baixo
 
-            // Boomer: projétil curva de volta após o apex
             if (mobile.shotType == ShotType.CURVE && step > 40) {
                 val curveForce = 0.003f * (step - 40)
                 vx -= direction * curveForce.coerceAtMost(0.15f)
@@ -83,7 +85,6 @@ object GunboundPhysics {
 
             if (y >= groundY) {
                 if (bouncesDone < maxBounces) {
-                    // Quica: reflete vy com perda de energia
                     y = groundY
                     vy = -vy * 0.55f
                     vx *= 0.75f

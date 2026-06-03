@@ -115,23 +115,22 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupControls(v: View) {
-        val tv  = v.findViewById(R.id.overlayTrajectoryView)  as TrajectoryView
-        val as_ = v.findViewById(R.id.overlaySeekAngle)       as SeekBar
-        val ps  = v.findViewById(R.id.overlaySeekPower)       as SeekBar
-        val ws  = v.findViewById(R.id.overlaySeekWind)        as SeekBar
-        val at  = v.findViewById(R.id.overlayAngleValue)      as TextView
-        val pt  = v.findViewById(R.id.overlayPowerValue)      as TextView
-        val wt  = v.findViewById(R.id.overlayWindValue)       as TextView
-        val db  = v.findViewById(R.id.overlayBtnDirection)    as Button
-        val mc  = v.findViewById(R.id.overlayMobileContainer) as LinearLayout
+        val tv = v.findViewById(R.id.overlayTrajectoryView)  as TrajectoryView
+        val at = v.findViewById(R.id.overlayAngleValue)      as TextView
+        val pt = v.findViewById(R.id.overlayPowerValue)      as TextView
+        val wt = v.findViewById(R.id.overlayWindValue)       as TextView
+        val wvt= v.findViewById(R.id.overlayWindVertValue)   as TextView
+        val db = v.findViewById(R.id.overlayBtnDirection)    as Button
+        val mc = v.findViewById(R.id.overlayMobileContainer) as LinearLayout
 
+        // Seleção de mobile
         val btns = mutableListOf<Button>()
         MobileData.mobiles.forEachIndexed { i, mobile ->
             val btn = Button(this)
             btn.text = mobile.displayName
             btn.textSize = 9f
             btn.setAllCaps(false)
-            btn.setPadding(10, 2, 10, 2)
+            btn.setPadding(8, 2, 8, 2)
             btn.setBackgroundColor(Color.parseColor("#1E3A5A"))
             btn.setTextColor(Color.WHITE)
             val lp = LinearLayout.LayoutParams(
@@ -153,30 +152,57 @@ class FloatingWindowService : Service() {
         btns[0].setBackgroundColor(Color.parseColor("#00FF88"))
         btns[0].setTextColor(Color.BLACK)
 
-        as_.max = 90;  as_.progress = 45
-        ps.max  = 100; ps.progress  = 50
-        ws.max  = 20;  ws.progress  = 10
-        at.text = "45°"; pt.text = "50"; wt.text = "0"
+        // Estado
+        var angle = 45; var power = 50; var windH = 0; var windV = 0
+        var windHDir = 1  // 1=direita, -1=esquerda
+        var windVDir = 1  // 1=baixo, -1=cima
 
-        as_.setOnSeekBarChangeListener(seek { p -> tv.angle = p.toFloat(); at.text = "$p°" })
-        ps.setOnSeekBarChangeListener( seek { p -> tv.power = p.toFloat(); pt.text = "$p"  })
-        ws.setOnSeekBarChangeListener( seek { p ->
-            val w = (p - 10).toFloat(); tv.windSpeed = w
-            wt.text = when { w > 0f -> "->${ w.toInt()}"; w < 0f -> "<-${(-w).toInt()}"; else -> "0" }
-        })
+        fun updateAngle() { tv.angle = angle.toFloat(); at.text = "$angle°" }
+        fun updatePower() { tv.power = power.toFloat(); pt.text = "$power" }
+        fun updateWindH() {
+            tv.windSpeed = (windH * windHDir).toFloat()
+            val sym = if (windHDir > 0) "→" else "←"
+            wt.text = "$sym$windH"
+        }
+        fun updateWindV() {
+            tv.windSpeedY = (windV * windVDir).toFloat()
+            val sym = if (windVDir > 0) "↓" else "↑"
+            wvt.text = "$sym$windV"
+        }
 
+        updateAngle(); updatePower(); updateWindH(); updateWindV()
+
+        // Botões de ângulo
+        v.findViewById(R.id.btnAngleMinus5).setOnClickListener { angle = (angle - 5).coerceAtLeast(0); updateAngle() }
+        v.findViewById(R.id.btnAngleMinus1).setOnClickListener { angle = (angle - 1).coerceAtLeast(0); updateAngle() }
+        v.findViewById(R.id.btnAnglePlus1) .setOnClickListener { angle = (angle + 1).coerceAtMost(90); updateAngle() }
+        v.findViewById(R.id.btnAnglePlus5) .setOnClickListener { angle = (angle + 5).coerceAtMost(90); updateAngle() }
+
+        // Botões de força
+        v.findViewById(R.id.btnPowerMinus5).setOnClickListener { power = (power - 5).coerceAtLeast(0);   updatePower() }
+        v.findViewById(R.id.btnPowerMinus1).setOnClickListener { power = (power - 1).coerceAtLeast(0);   updatePower() }
+        v.findViewById(R.id.btnPowerPlus1) .setOnClickListener { power = (power + 1).coerceAtMost(100);  updatePower() }
+        v.findViewById(R.id.btnPowerPlus5) .setOnClickListener { power = (power + 5).coerceAtMost(100);  updatePower() }
+
+        // Botões de vento horizontal
+        v.findViewById(R.id.btnWindLeft) .setOnClickListener { windHDir = -1; updateWindH() }
+        v.findViewById(R.id.btnWindRight).setOnClickListener { windHDir =  1; updateWindH() }
+        v.findViewById(R.id.btnWindMinus).setOnClickListener { windH = (windH - 1).coerceAtLeast(0); updateWindH() }
+        v.findViewById(R.id.btnWindPlus) .setOnClickListener { windH = (windH + 1).coerceAtMost(10); updateWindH() }
+
+        // Botões de vento vertical
+        v.findViewById(R.id.btnWindUp)       .setOnClickListener { windVDir = -1; updateWindV() }
+        v.findViewById(R.id.btnWindDown)     .setOnClickListener { windVDir =  1; updateWindV() }
+        v.findViewById(R.id.btnWindVertMinus).setOnClickListener { windV = (windV - 1).coerceAtLeast(0); updateWindV() }
+        v.findViewById(R.id.btnWindVertPlus) .setOnClickListener { windV = (windV + 1).coerceAtMost(10); updateWindV() }
+
+        // Direção do personagem
         var right = true
         db.text = "-> DIREITA"
         db.setOnClickListener {
             right = !right; tv.facingRight = right
             db.text = if (right) "-> DIREITA" else "<- ESQUERDA"
         }
-    }
-
-    private fun seek(block: (Int) -> Unit) = object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(sb: SeekBar, p: Int, f: Boolean) = block(p)
-        override fun onStartTrackingTouch(sb: SeekBar) {}
-        override fun onStopTrackingTouch(sb: SeekBar) {}
     }
 
     private fun toast(msg: String) {

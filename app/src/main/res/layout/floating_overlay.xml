@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="250dp"
+    android:layout_width="260dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="#CC0D1B2A"
@@ -78,72 +78,195 @@
                 android:padding="2dp"/>
         </HorizontalScrollView>
 
-        <!-- Controles -->
+        <!-- Controles rápidos -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="#BB0D1B2A"
-            android:padding="6dp">
+            android:padding="5dp">
 
-            <!-- Ângulo -->
+            <!-- Ângulo: label + botões +/- + valor -->
             <LinearLayout android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="36dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="3dp">
-                <TextView android:layout_width="28dp" android:layout_height="wrap_content"
-                    android:text="Ang" android:textColor="#AAAAAA" android:textSize="9sp"
+
+                <TextView android:layout_width="26dp" android:layout_height="wrap_content"
+                    android:text="Ang" android:textColor="#00FF88" android:textSize="9sp"
                     android:fontFamily="monospace"/>
-                <SeekBar android:id="@+id/overlaySeekAngle"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
+
+                <Button android:id="@+id/btnAngleMinus5"
+                    android:layout_width="0dp" android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:progressTint="#00FF88" android:thumbTint="#00FF88"/>
+                    android:text="-5" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#223344" android:padding="0dp"/>
+
+                <Button android:id="@+id/btnAngleMinus1"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="-1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#1A2B3C" android:padding="0dp"
+                    android:layout_marginLeft="1dp"/>
+
                 <TextView android:id="@+id/overlayAngleValue"
-                    android:layout_width="30dp" android:layout_height="wrap_content"
-                    android:text="45°" android:textColor="#00FF88" android:textSize="10sp"
-                    android:fontFamily="monospace" android:gravity="end"/>
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="45°" android:textColor="#00FF88" android:textSize="12sp"
+                    android:fontFamily="monospace" android:gravity="center"
+                    android:textStyle="bold"/>
+
+                <Button android:id="@+id/btnAnglePlus1"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="+1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#1A2B3C" android:padding="0dp"
+                    android:layout_marginRight="1dp"/>
+
+                <Button android:id="@+id/btnAnglePlus5"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="+5" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#223344" android:padding="0dp"/>
             </LinearLayout>
 
-            <!-- Força -->
+            <!-- Força: label + botões +/- + valor -->
             <LinearLayout android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="36dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="3dp">
-                <TextView android:layout_width="28dp" android:layout_height="wrap_content"
-                    android:text="Fca" android:textColor="#AAAAAA" android:textSize="9sp"
+
+                <TextView android:layout_width="26dp" android:layout_height="wrap_content"
+                    android:text="Fca" android:textColor="#FF6B35" android:textSize="9sp"
                     android:fontFamily="monospace"/>
-                <SeekBar android:id="@+id/overlaySeekPower"
-                    android:layout_width="0dp" android:layout_height="wrap_content"
+
+                <Button android:id="@+id/btnPowerMinus5"
+                    android:layout_width="0dp" android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:progressTint="#FF6B35" android:thumbTint="#FF6B35"/>
+                    android:text="-5" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#332200" android:padding="0dp"/>
+
+                <Button android:id="@+id/btnPowerMinus1"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="-1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#221800" android:padding="0dp"
+                    android:layout_marginLeft="1dp"/>
+
                 <TextView android:id="@+id/overlayPowerValue"
-                    android:layout_width="30dp" android:layout_height="wrap_content"
-                    android:text="50" android:textColor="#FF6B35" android:textSize="10sp"
-                    android:fontFamily="monospace" android:gravity="end"/>
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="50" android:textColor="#FF6B35" android:textSize="12sp"
+                    android:fontFamily="monospace" android:gravity="center"
+                    android:textStyle="bold"/>
+
+                <Button android:id="@+id/btnPowerPlus1"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="+1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#221800" android:padding="0dp"
+                    android:layout_marginRight="1dp"/>
+
+                <Button android:id="@+id/btnPowerPlus5"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="+5" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#332200" android:padding="0dp"/>
             </LinearLayout>
 
-            <!-- Vento -->
+            <!-- Vento Horizontal: direção + força -->
             <LinearLayout android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="34dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="2dp">
+
+                <TextView android:layout_width="26dp" android:layout_height="wrap_content"
+                    android:text="VH" android:textColor="#87CEEB" android:textSize="9sp"
+                    android:fontFamily="monospace"/>
+
+                <Button android:id="@+id/btnWindLeft"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1.2"
+                    android:text="←" android:textSize="11sp" android:textColor="#FFFFFF"
+                    android:background="#003355" android:padding="0dp"/>
+
+                <Button android:id="@+id/btnWindMinus"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="0.8"
+                    android:text="-1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#002244" android:padding="0dp"
+                    android:layout_marginLeft="1dp"/>
+
+                <TextView android:id="@+id/overlayWindValue"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1.4"
+                    android:text="→0" android:textColor="#87CEEB" android:textSize="11sp"
+                    android:fontFamily="monospace" android:gravity="center"
+                    android:textStyle="bold"/>
+
+                <Button android:id="@+id/btnWindPlus"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="0.8"
+                    android:text="+1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#002244" android:padding="0dp"
+                    android:layout_marginRight="1dp"/>
+
+                <Button android:id="@+id/btnWindRight"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1.2"
+                    android:text="→" android:textSize="11sp" android:textColor="#FFFFFF"
+                    android:background="#003355" android:padding="0dp"/>
+            </LinearLayout>
+
+            <!-- Vento Vertical: cima/baixo -->
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="34dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="4dp">
-                <TextView android:layout_width="28dp" android:layout_height="wrap_content"
-                    android:text="Vto" android:textColor="#AAAAAA" android:textSize="9sp"
+
+                <TextView android:layout_width="26dp" android:layout_height="wrap_content"
+                    android:text="VV" android:textColor="#AADDFF" android:textSize="9sp"
                     android:fontFamily="monospace"/>
-                <SeekBar android:id="@+id/overlaySeekWind"
+
+                <Button android:id="@+id/btnWindUp"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1.2"
+                    android:text="↑" android:textSize="11sp" android:textColor="#FFFFFF"
+                    android:background="#003355" android:padding="0dp"/>
+
+                <Button android:id="@+id/btnWindVertMinus"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="0.8"
+                    android:text="-1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#002244" android:padding="0dp"
+                    android:layout_marginLeft="1dp"/>
+
+                <TextView android:id="@+id/overlayWindVertValue"
                     android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:progressTint="#87CEEB" android:thumbTint="#87CEEB"/>
-                <TextView android:id="@+id/overlayWindValue"
-                    android:layout_width="30dp" android:layout_height="wrap_content"
-                    android:text="0" android:textColor="#87CEEB" android:textSize="10sp"
-                    android:fontFamily="monospace" android:gravity="end"/>
+                    android:layout_weight="1.4"
+                    android:text="↓0" android:textColor="#AADDFF" android:textSize="11sp"
+                    android:fontFamily="monospace" android:gravity="center"
+                    android:textStyle="bold"/>
+
+                <Button android:id="@+id/btnWindVertPlus"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="0.8"
+                    android:text="+1" android:textSize="9sp" android:textColor="#FFFFFF"
+                    android:background="#002244" android:padding="0dp"
+                    android:layout_marginRight="1dp"/>
+
+                <Button android:id="@+id/btnWindDown"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1.2"
+                    android:text="↓" android:textSize="11sp" android:textColor="#FFFFFF"
+                    android:background="#003355" android:padding="0dp"/>
             </LinearLayout>
 
-            <!-- Direção -->
+            <!-- Direção do personagem -->
             <Button
                 android:id="@+id/overlayBtnDirection"
                 android:layout_width="match_parent"

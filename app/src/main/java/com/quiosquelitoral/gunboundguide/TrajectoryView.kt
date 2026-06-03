@@ -21,6 +21,9 @@ class TrajectoryView @JvmOverloads constructor(
     var windSpeed: Float = 0f
         set(value) { field = value.coerceIn(-10f, 10f); invalidate() }
 
+    var windSpeedY: Float = 0f
+        set(value) { field = value.coerceIn(-10f, 10f); invalidate() }
+
     var facingRight: Boolean = true
         set(value) { field = value; invalidate() }
 
@@ -123,7 +126,7 @@ class TrajectoryView @JvmOverloads constructor(
         val shooterY = groundY
 
         val results = GunboundPhysics.simulate(
-            shooterX, shooterY, angle, power, windSpeed,
+            shooterX, shooterY, angle, power, windSpeed, windSpeedY,
             selectedMobile, facingRight, groundY, w
         )
 
@@ -221,28 +224,29 @@ class TrajectoryView @JvmOverloads constructor(
 
     private fun drawWindIndicator(canvas: Canvas, w: Float) {
         val cx = w / 2f
-        val speed = abs(windSpeed)
-        val dirSymbol = when {
-            windSpeed > 0f -> "→"
-            windSpeed < 0f -> "←"
-            else -> "•"
-        }
-        val windLabel = "VENTO $dirSymbol ${speed.toInt()}"
-        canvas.drawText(windLabel, cx, 38f, windTextPaint)
+        val hSpeed = abs(windSpeed)
+        val vSpeed = abs(windSpeedY)
 
-        if (speed > 0f) {
-            val arrowLen = (speed / 10f) * 55f
-            val arrowY = 55f
+        val hSym = when { windSpeed > 0f -> "→"; windSpeed < 0f -> "←"; else -> "" }
+        val vSym = when { windSpeedY > 0f -> "↓"; windSpeedY < 0f -> "↑"; else -> "" }
+
+        val parts = mutableListOf<String>()
+        if (hSpeed > 0f) parts.add("$hSym${hSpeed.toInt()}")
+        if (vSpeed > 0f) parts.add("$vSym${vSpeed.toInt()}")
+        val label = if (parts.isEmpty()) "VENTO •" else "VENTO ${parts.joinToString(" ")}"
+        canvas.drawText(label, cx, 38f, windTextPaint)
+
+        if (hSpeed > 0f) {
+            val arrowLen = (hSpeed / 10f) * 50f
+            val arrowY = 56f
             val dir = if (windSpeed > 0f) 1f else -1f
             val startX = cx - dir * arrowLen / 2f
-            val endX = cx + dir * arrowLen / 2f
-
-            canvas.drawLine(startX, arrowY, endX - dir * 12f, arrowY, windArrowPaint)
-
+            val endX   = cx + dir * arrowLen / 2f
+            canvas.drawLine(startX, arrowY, endX - dir * 10f, arrowY, windArrowPaint)
             val head = Path()
             head.moveTo(endX, arrowY)
-            head.lineTo(endX - dir * 14f, arrowY - 7f)
-            head.lineTo(endX - dir * 14f, arrowY + 7f)
+            head.lineTo(endX - dir * 12f, arrowY - 6f)
+            head.lineTo(endX - dir * 12f, arrowY + 6f)
             head.close()
             canvas.drawPath(head, windArrowFillPaint)
         }
