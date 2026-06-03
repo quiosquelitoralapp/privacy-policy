@@ -274,6 +274,6 @@ class TrajectoryView @JvmOverloads constructor(
         // Mobile name top-left
         textPaint.textSize = 26f
         textPaint.color = Color.parseColor("#AAAAAA")
-        canvas.drawText(selectedMobile.displayName.uppercase(), 12f, 30f, textPaint)
+        canvas.drawText(selectedMobile.displayName.toUpperCase(), 12f, 30f, textPaint)
     }
 }

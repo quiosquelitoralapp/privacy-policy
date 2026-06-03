@@ -1,11 +1,11 @@
 package com.quiosquelitoral.gunboundguide
 
+import android.app.Activity
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private lateinit var trajectoryView: TrajectoryView
     private lateinit var angleSeekBar: SeekBar
@@ -25,15 +25,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        trajectoryView  = findViewById(R.id.trajectoryView)
-        angleSeekBar    = findViewById(R.id.seekAngle)
-        powerSeekBar    = findViewById(R.id.seekPower)
-        windSeekBar     = findViewById(R.id.seekWind)
-        angleValueText  = findViewById(R.id.tvAngleValue)
-        powerValueText  = findViewById(R.id.tvPowerValue)
-        windValueText   = findViewById(R.id.tvWindValue)
-        directionBtn    = findViewById(R.id.btnDirection)
-        mobileContainer = findViewById(R.id.mobileContainer)
+        trajectoryView  = findViewById(R.id.trajectoryView)  as TrajectoryView
+        angleSeekBar    = findViewById(R.id.seekAngle)        as SeekBar
+        powerSeekBar    = findViewById(R.id.seekPower)        as SeekBar
+        windSeekBar     = findViewById(R.id.seekWind)         as SeekBar
+        angleValueText  = findViewById(R.id.tvAngleValue)     as TextView
+        powerValueText  = findViewById(R.id.tvPowerValue)     as TextView
+        windValueText   = findViewById(R.id.tvWindValue)      as TextView
+        directionBtn    = findViewById(R.id.btnDirection)     as Button
+        mobileContainer = findViewById(R.id.mobileContainer)  as LinearLayout
 
         setupMobileButtons()
         setupSeekBars()
@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
             val btn = Button(this).apply {
                 text = mobile.displayName
                 textSize = 11f
-                isAllCaps = false
+                setAllCaps(false)
                 setPadding(20, 6, 20, 6)
                 setOnClickListener { selectMobile(index) }
             }
@@ -64,11 +64,11 @@ class MainActivity : AppCompatActivity() {
         selectedMobileIndex = index
         mobileButtons.forEachIndexed { i, btn ->
             if (i == index) {
-                btn.setBackgroundColor(ContextCompat.getColor(this, R.color.accent_green))
-                btn.setTextColor(ContextCompat.getColor(this, android.R.color.black))
+                btn.setBackgroundColor(Color.parseColor("#00FF88"))
+                btn.setTextColor(Color.BLACK)
             } else {
-                btn.setBackgroundColor(ContextCompat.getColor(this, R.color.btn_bg))
-                btn.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+                btn.setBackgroundColor(Color.parseColor("#1E3A5A"))
+                btn.setTextColor(Color.WHITE)
             }
         }
         trajectoryView.selectedMobile = MobileData.mobiles[index]
@@ -77,11 +77,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupSeekBars() {
         angleSeekBar.max = 90
         angleSeekBar.progress = 45
-
         powerSeekBar.max = 100
         powerSeekBar.progress = 50
-
-        // Wind: 0..20, onde 10 = sem vento
         windSeekBar.max = 20
         windSeekBar.progress = 10
 
@@ -91,12 +88,10 @@ class MainActivity : AppCompatActivity() {
             trajectoryView.angle = progress.toFloat()
             angleValueText.text = "$progress°"
         })
-
         powerSeekBar.setOnSeekBarChangeListener(onChange { progress ->
             trajectoryView.power = progress.toFloat()
             powerValueText.text = "$progress"
         })
-
         windSeekBar.setOnSeekBarChangeListener(onChange { progress ->
             val wind = (progress - 10).toFloat()
             trajectoryView.windSpeed = wind
