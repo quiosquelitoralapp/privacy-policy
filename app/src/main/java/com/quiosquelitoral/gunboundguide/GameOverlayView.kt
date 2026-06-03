@@ -73,6 +73,10 @@ class GameOverlayView(context: Context) : View(context) {
 
         val sw = if (screenW > 1f) screenW else dw
 
+        // Ponto amarelo na posição do personagem detectado (debug de coordenadas)
+        val charDot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.YELLOW; style = Paint.Style.FILL }
+        canvas.drawCircle(charX, charY, 14f, charDot)
+
         // Trajetória SEM vento (referência — branco)
         val noWind = GunboundPhysics.simulate(
             charX, charY, angle, power, 0f, 0f,
@@ -110,12 +114,11 @@ class GameOverlayView(context: Context) : View(context) {
     private fun drawTraj(canvas: Canvas, pts: List<TrajectoryPoint>, paint: Paint) {
         if (pts.size < 2) return
         val step = maxOf(1, pts.size / 200)
-        val path = Path()
-        path.moveTo(pts[0].x, pts[0].y)
         var i = step
-        while (i < pts.size) { path.lineTo(pts[i].x, pts[i].y); i += step }
-        path.lineTo(pts.last().x, pts.last().y)
-        canvas.drawPath(path, paint)
+        while (i < pts.size) {
+            canvas.drawLine(pts[i - step].x, pts[i - step].y, pts[i].x, pts[i].y, paint)
+            i += step
+        }
     }
 
     private fun drawMarkerWind(canvas: Canvas, x: Float, y: Float) {

@@ -39,8 +39,12 @@ object AimDetector {
                 val py = (charY + r * dy).roundToInt()
                 if (px < 0 || px >= w || py < 0 || py >= h) break
                 val p = pixels[py * w + px]
-                val gray = ((p shr 16 and 0xFF) * 299 + (p shr 8 and 0xFF) * 587 + (p and 0xFF) * 114) / 1000
-                if (gray > BRIGHT) score += 1f
+                val r2 = (p shr 16) and 0xFF
+                val g2 = (p shr 8)  and 0xFF
+                val b2 = p and 0xFF
+                val gray = (r2 * 299 + g2 * 587 + b2 * 114) / 1000
+                // Branco OU azul/ciano brilhante (mira parabólica do Gunbound)
+                if (gray > BRIGHT || (b2 > 150 && b2 > r2 + 50)) score += 1f
                 r += 3
             }
 
