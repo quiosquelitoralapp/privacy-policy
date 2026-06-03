@@ -103,6 +103,15 @@ class FloatingWindowService : Service() {
             }
         }
         view.findViewById(R.id.btnCloseOverlay).setOnClickListener { stopSelf() }
+
+        var collapsed = false
+        val collapseBtn = view.findViewById(R.id.btnCollapseOverlay) as android.widget.Button
+        val content    = view.findViewById(R.id.overlayContent)      as android.view.ViewGroup
+        collapseBtn.setOnClickListener {
+            collapsed = !collapsed
+            content.visibility = if (collapsed) android.view.View.GONE else android.view.View.VISIBLE
+            collapseBtn.text   = if (collapsed) "▼" else "▲"
+        }
     }
 
     private fun setupControls(v: View) {

@@ -1,140 +1,160 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="290dp"
+    android:layout_width="250dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#F00D1B2A"
+    android:background="#CC0D1B2A"
     android:padding="2dp">
 
     <!-- Header: arrastar aqui -->
     <LinearLayout
         android:id="@+id/floatingHeader"
         android:layout_width="match_parent"
-        android:layout_height="38dp"
+        android:layout_height="32dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#FF00FF88"
-        android:paddingLeft="8dp"
-        android:paddingRight="6dp">
+        android:background="#DD00FF88"
+        android:paddingLeft="6dp"
+        android:paddingRight="4dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="= GUNBOUND MIRA"
+            android:text="GB MIRA"
             android:textColor="#000000"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:fontFamily="monospace"/>
 
         <Button
+            android:id="@+id/btnCollapseOverlay"
+            android:layout_width="28dp"
+            android:layout_height="24dp"
+            android:text="▲"
+            android:textSize="8sp"
+            android:textColor="#000000"
+            android:background="#AA00CC66"
+            android:padding="0dp"/>
+
+        <Button
             android:id="@+id/btnCloseOverlay"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:text="X"
-            android:textSize="9sp"
+            android:textSize="8sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
             android:background="#CCFF4444"
-            android:padding="0dp"/>
+            android:padding="0dp"
+            android:layout_marginLeft="2dp"/>
     </LinearLayout>
 
-    <!-- Canvas de trajetória -->
-    <com.quiosquelitoral.gunboundguide.TrajectoryView
-        android:id="@+id/overlayTrajectoryView"
-        android:layout_width="match_parent"
-        android:layout_height="160dp"/>
-
-    <!-- Seleção de mobile -->
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#0A1520"
-        android:scrollbars="none">
-        <LinearLayout
-            android:id="@+id/overlayMobileContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="3dp"/>
-    </HorizontalScrollView>
-
-    <!-- Controles -->
+    <!-- Conteúdo recolhível -->
     <LinearLayout
+        android:id="@+id/overlayContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#0D1B2A"
-        android:padding="8dp">
+        android:orientation="vertical">
 
-        <!-- Ângulo -->
-        <LinearLayout android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
-            <TextView android:layout_width="30dp" android:layout_height="wrap_content"
-                android:text="Ang" android:textColor="#AAAAAA" android:textSize="10sp"
-                android:fontFamily="monospace"/>
-            <SeekBar android:id="@+id/overlaySeekAngle"
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:progressTint="#00FF88" android:thumbTint="#00FF88"/>
-            <TextView android:id="@+id/overlayAngleValue"
-                android:layout_width="34dp" android:layout_height="wrap_content"
-                android:text="45°" android:textColor="#00FF88" android:textSize="10sp"
-                android:fontFamily="monospace" android:gravity="end"/>
-        </LinearLayout>
-
-        <!-- Força -->
-        <LinearLayout android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
-            <TextView android:layout_width="30dp" android:layout_height="wrap_content"
-                android:text="Fca" android:textColor="#AAAAAA" android:textSize="10sp"
-                android:fontFamily="monospace"/>
-            <SeekBar android:id="@+id/overlaySeekPower"
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:progressTint="#FF6B35" android:thumbTint="#FF6B35"/>
-            <TextView android:id="@+id/overlayPowerValue"
-                android:layout_width="34dp" android:layout_height="wrap_content"
-                android:text="50" android:textColor="#FF6B35" android:textSize="10sp"
-                android:fontFamily="monospace" android:gravity="end"/>
-        </LinearLayout>
-
-        <!-- Vento -->
-        <LinearLayout android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="6dp">
-            <TextView android:layout_width="30dp" android:layout_height="wrap_content"
-                android:text="Vto" android:textColor="#AAAAAA" android:textSize="10sp"
-                android:fontFamily="monospace"/>
-            <SeekBar android:id="@+id/overlaySeekWind"
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:progressTint="#87CEEB" android:thumbTint="#87CEEB"/>
-            <TextView android:id="@+id/overlayWindValue"
-                android:layout_width="34dp" android:layout_height="wrap_content"
-                android:text="0" android:textColor="#87CEEB" android:textSize="10sp"
-                android:fontFamily="monospace" android:gravity="end"/>
-        </LinearLayout>
-
-        <!-- Direção -->
-        <Button
-            android:id="@+id/overlayBtnDirection"
+        <!-- Canvas de trajetória -->
+        <com.quiosquelitoral.gunboundguide.TrajectoryView
+            android:id="@+id/overlayTrajectoryView"
             android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:text="-> DIREITA"
-            android:textColor="#000000"
-            android:textStyle="bold"
-            android:textSize="11sp"
-            android:background="#FFD700"/>
+            android:layout_height="130dp"/>
+
+        <!-- Seleção de mobile -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#0A1520"
+            android:scrollbars="none">
+            <LinearLayout
+                android:id="@+id/overlayMobileContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="2dp"/>
+        </HorizontalScrollView>
+
+        <!-- Controles -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#BB0D1B2A"
+            android:padding="6dp">
+
+            <!-- Ângulo -->
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="3dp">
+                <TextView android:layout_width="28dp" android:layout_height="wrap_content"
+                    android:text="Ang" android:textColor="#AAAAAA" android:textSize="9sp"
+                    android:fontFamily="monospace"/>
+                <SeekBar android:id="@+id/overlaySeekAngle"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:progressTint="#00FF88" android:thumbTint="#00FF88"/>
+                <TextView android:id="@+id/overlayAngleValue"
+                    android:layout_width="30dp" android:layout_height="wrap_content"
+                    android:text="45°" android:textColor="#00FF88" android:textSize="10sp"
+                    android:fontFamily="monospace" android:gravity="end"/>
+            </LinearLayout>
+
+            <!-- Força -->
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="3dp">
+                <TextView android:layout_width="28dp" android:layout_height="wrap_content"
+                    android:text="Fca" android:textColor="#AAAAAA" android:textSize="9sp"
+                    android:fontFamily="monospace"/>
+                <SeekBar android:id="@+id/overlaySeekPower"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:progressTint="#FF6B35" android:thumbTint="#FF6B35"/>
+                <TextView android:id="@+id/overlayPowerValue"
+                    android:layout_width="30dp" android:layout_height="wrap_content"
+                    android:text="50" android:textColor="#FF6B35" android:textSize="10sp"
+                    android:fontFamily="monospace" android:gravity="end"/>
+            </LinearLayout>
+
+            <!-- Vento -->
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+                <TextView android:layout_width="28dp" android:layout_height="wrap_content"
+                    android:text="Vto" android:textColor="#AAAAAA" android:textSize="9sp"
+                    android:fontFamily="monospace"/>
+                <SeekBar android:id="@+id/overlaySeekWind"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:progressTint="#87CEEB" android:thumbTint="#87CEEB"/>
+                <TextView android:id="@+id/overlayWindValue"
+                    android:layout_width="30dp" android:layout_height="wrap_content"
+                    android:text="0" android:textColor="#87CEEB" android:textSize="10sp"
+                    android:fontFamily="monospace" android:gravity="end"/>
+            </LinearLayout>
+
+            <!-- Direção -->
+            <Button
+                android:id="@+id/overlayBtnDirection"
+                android:layout_width="match_parent"
+                android:layout_height="30dp"
+                android:text="-> DIREITA"
+                android:textColor="#000000"
+                android:textStyle="bold"
+                android:textSize="10sp"
+                android:background="#FFD700"/>
+        </LinearLayout>
+
     </LinearLayout>
 
 </LinearLayout>
