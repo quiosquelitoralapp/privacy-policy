@@ -47,7 +47,13 @@ kotlinc \
     $KOTLIN_FILES
 
 echo "=== 5. Convertendo para DEX ==="
-$DX --dex --output=$BUILD/classes.dex $BUILD/classes.jar $BUILD/R.jar
+KOTLIN_STDLIB=/usr/share/java/kotlin-stdlib-1.3.31.jar
+KOTLIN_STDLIB_JDK7=/usr/share/java/kotlin-stdlib-jdk7-1.3.31.jar
+$DX --dex --output=$BUILD/classes.dex \
+    $BUILD/classes.jar \
+    $BUILD/R.jar \
+    $KOTLIN_STDLIB \
+    $KOTLIN_STDLIB_JDK7
 
 echo "=== 6. Montando APK final ==="
 cp $BUILD/resources.apk $BUILD/app-unsigned.apk

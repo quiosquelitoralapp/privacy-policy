@@ -41,7 +41,7 @@ class FloatingWindowService : Service() {
         try {
             createNotificationChannel()
             startForeground(NOTIF_ID, buildNotification())
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Android 14 may reject startForeground without type — continues without notification
         }
         createFloatingWindow()
@@ -78,8 +78,8 @@ class FloatingWindowService : Service() {
             wm.addView(view, params)
 
             toast("Overlay ativo! Abra o Gunbound.")
-        } catch (e: Exception) {
-            toast("Erro: ${e.javaClass.simpleName}")
+        } catch (e: Throwable) {
+            toast("Erro overlay: ${e.javaClass.simpleName}: ${e.message?.take(60)}")
             isRunning = false
             stopSelf()
         }
@@ -96,7 +96,7 @@ class FloatingWindowService : Service() {
                 MotionEvent.ACTION_MOVE -> {
                     params.x = initialX + (event.rawX - initialTouchX).toInt()
                     params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    try { wm.updateViewLayout(view, params) } catch (e: Exception) {}
+                    try { wm.updateViewLayout(view, params) } catch (e: Throwable) {}
                     true
                 }
                 else -> false
@@ -184,7 +184,7 @@ class FloatingWindowService : Service() {
                 .newInstance(CHANNEL_ID, "Gunbound Mira", 2)
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.javaClass.getMethod("createNotificationChannel", cls).invoke(nm, ch)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     @Suppress("DEPRECATION")
@@ -203,7 +203,7 @@ class FloatingWindowService : Service() {
 
         if (Build.VERSION.SDK_INT >= 26) {
             try { b.javaClass.getMethod("setChannelId", String::class.java).invoke(b, CHANNEL_ID) }
-            catch (e: Exception) {}
+            catch (e: Throwable) {}
         }
         return b.build()
     }
@@ -219,7 +219,7 @@ class FloatingWindowService : Service() {
         val v = floatingView
         val wm = windowManager
         if (v != null && wm != null) {
-            try { wm.removeView(v) } catch (e: Exception) {}
+            try { wm.removeView(v) } catch (e: Throwable) {}
         }
     }
 }
