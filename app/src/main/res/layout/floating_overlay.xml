@@ -4,16 +4,17 @@
     android:layout_width="290dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#DC0D1B2A">
+    android:background="#F00D1B2A"
+    android:padding="2dp">
 
     <!-- Header: arrastar aqui -->
     <LinearLayout
         android:id="@+id/floatingHeader"
         android:layout_width="match_parent"
-        android:layout_height="34dp"
+        android:layout_height="38dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#F00A1520"
+        android:background="#FF00FF88"
         android:paddingLeft="8dp"
         android:paddingRight="6dp">
 
@@ -22,7 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="= GUNBOUND MIRA"
-            android:textColor="#FFD700"
+            android:textColor="#000000"
             android:textSize="12sp"
             android:textStyle="bold"
             android:fontFamily="monospace"/>

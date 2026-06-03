@@ -6,7 +6,9 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.*
 import android.widget.*
 
@@ -52,7 +54,8 @@ class FloatingWindowService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             windowType,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
         )
@@ -64,8 +67,14 @@ class FloatingWindowService : Service() {
         setupControls()
         try {
             windowManager.addView(floatingView, floatingParams)
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(applicationContext, "Overlay ativo! Abra o jogo.", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
             isRunning = false
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(applicationContext, "Erro ao abrir overlay: ${e.message}", Toast.LENGTH_LONG).show()
+            }
             stopSelf()
         }
     }
